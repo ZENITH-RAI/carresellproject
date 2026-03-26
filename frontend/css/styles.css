@@ -42,7 +42,12 @@ body {
   line-height: 1.55;
   color: var(--text);
   background: var(--bg);
-  background-image: linear-gradient(180deg, #ffffff 0%, var(--bg) 28%, var(--bg) 100%);
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    var(--bg) 28%,
+    var(--bg) 100%
+  );
 }
 
 a {
@@ -199,7 +204,10 @@ main {
     transform: translateY(-100%);
     opacity: 0;
     visibility: hidden;
-    transition: transform 0.25s ease, opacity 0.25s ease, visibility 0.25s;
+    transition:
+      transform 0.25s ease,
+      opacity 0.25s ease,
+      visibility 0.25s;
   }
 
   .nav.is-open {
@@ -226,7 +234,10 @@ main {
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .btn:active {
@@ -242,6 +253,7 @@ main {
 .btn--primary:hover {
   background: var(--accent-hover);
   box-shadow: 0 6px 20px rgba(26, 86, 176, 0.4);
+  color: white;
 }
 
 .btn--ghost {
@@ -321,7 +333,7 @@ main {
   font-family: var(--font-display);
   font-size: clamp(2.25rem, 4vw, 3.25rem);
   font-weight: 700;
-  line-height:1.1;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   margin: 0 0 1rem;
 }
@@ -391,7 +403,9 @@ main {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .section-heading {
@@ -600,7 +614,9 @@ main {
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--text);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 /* Combobox (brand / model typeahead) */
@@ -782,7 +798,9 @@ main {
   z-index: 100;
   transform: translateY(120%);
   opacity: 0;
-  transition: transform 0.35s ease, opacity 0.35s ease;
+  transition:
+    transform 0.35s ease,
+    opacity 0.35s ease;
 }
 
 .toast.is-visible {
@@ -829,7 +847,7 @@ main {
 /* Footer */
 .site-footer {
   margin-top: auto;
-  padding: 2rem 0;
+  /* padding: 2rem 0; */
   border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -841,5 +859,6 @@ main {
 }
 
 .site-footer a:hover {
-  color: var(--accent);
+  /* color: var(--accent); */
+  color: black;
 }
