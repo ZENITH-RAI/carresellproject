@@ -170,6 +170,14 @@ initialize_and_train()
 def index():
     return render_template('index.html', metrics=model_metrics, price=None)
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/estimate')
+def estimate():
+    return render_template('estimate.html', metrics=model_metrics)
+
 @app.route('/predict', methods=['POST'])
 def predict():
     # Extract form data and convert types safely
