@@ -67,69 +67,37 @@
         <header class="page-head">
           <h1>About this project</h1>
           <p>
-            AutoValue is the front end for your final-year used-car resale FYP:
-            a price estimator paired with a custom ML pipeline (SGD regressor,
-            feature engineering in Python).
+            <strong>AutoValue</strong> is a small tool for getting a ballpark
+            resale price for a used car. Tell us about the vehicle—make, age,
+            mileage, and a few specs—and we return an estimate informed by
+            patterns in past listings.
           </p>
         </header>
 
         <div class="prose">
-          <h2>Front-end stack</h2>
+          <h2>Why it exists</h2>
           <p>
-            The site lives in <code>frontend/</code>: semantic HTML, one shared
-            stylesheet (<code>css/styles.css</code>), and small scripts—<code
-              >js/main.js</code
-            >
-            for navigation and form submit handling,
-            <code>js/vehicleAutocomplete.js</code> for brand/model search. There
-            is no React or build step; you can open the pages from any static
-            host or run <code>python -m http.server</code> inside
-            <code>frontend/</code> during development.
+            Buying or selling a used car often comes down to guesswork. This
+            project was built as coursework to explore how data and machine
+            learning can support a clearer starting point: not a guarantee, but
+            a reasoned estimate you can compare with market listings and your
+            own judgment.
           </p>
-          <h2>Brand and model data (<code>UsedCars.csv</code>)</h2>
+
+          <h2>How it works</h2>
           <p>
-            Listing suggestions are not hand-typed:
-            <code>scripts/build_vehicle_catalog.py</code> reads
-            <code>UsedCars.csv</code> and writes
-            <code>frontend/data/vehicle_catalog.json</code>. Splitting matches
-            <code>app.py</code>: the first token of <code>name</code> is
-            <strong>brand</strong>, the remainder is <strong>model</strong>.
-            Each brand lists the distinct models seen in the data, plus an
-            <code>Other</code> option at the end for rare trims that map to the
-            model bucket in training.
+            Behind the scenes, a model learns from historical sales data. When
+            you submit the form, your inputs are turned into a prediction you
+            can read at a glance. The site is meant to stay simple on the
+            surface—details of the implementation belong in documentation and
+            demos for anyone who needs them.
           </p>
+
+          <h2>A note on accuracy</h2>
           <p>
-            After you update the CSV, regenerate the JSON from the repository
-            root:
-          </p>
-          <p><code>python scripts/build_vehicle_catalog.py</code></p>
-          <h2>Estimator field names</h2>
-          <p>The form uses the same names as the server expects:</p>
-          <ul>
-            <li>
-              <code>brand</code>, <code>model</code>, <code>year</code>,
-              <code>km_driven</code>
-            </li>
-            <li>
-              <code>fuel</code>, <code>transmission</code>,
-              <code>seller_type</code>, <code>owner</code>
-            </li>
-            <li>
-              <code>mileage</code>, <code>engine</code>, <code>max_power</code>,
-              <code>seats</code>
-            </li>
-          </ul>
-          <p>
-            On the server, <code>brand_model</code> is derived as
-            <code>brand + "_" + model</code>; the front end does not need a
-            separate field for that.
-          </p>
-          <h2>Next step for integration</h2>
-          <p>
-            Replace the submit handler in <code>js/main.js</code> with a
-            <code>fetch</code> POST to your API, then render the formatted NPR
-            string in the result card. Until then, the UI validates input and
-            shows a short loading state.
+            Real prices depend on condition, service history, location,
+            negotiation, and timing. Treat any number here as a guide, not
+            financial advice.
           </p>
         </div>
       </div>
