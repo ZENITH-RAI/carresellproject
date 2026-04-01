@@ -135,7 +135,7 @@
       }
       if (submitBtn) submitBtn.disabled = false;
       showToast(
-        "Form submitted. Connect the pricing service to show a live estimate here."
+        "Form submitted. Connect the pricing service to show a live estimate here.",
       );
     }, 650);
   });

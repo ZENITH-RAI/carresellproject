@@ -19,7 +19,6 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
-    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -27,7 +26,7 @@
     <header class="site-header">
       <div class="site-header__inner">
         <a class="logo" href="/">
-          <span class="logo__mark" aria-hidden="true">A</span>
+          <span class="logo_mark" aria-hidden="true">A</span>
           AutoValue
         </a>
         <button
@@ -127,6 +126,7 @@
       </div>
     </footer>
 
-    <script src="js/main.js" defer></script>
+    <!-- <script src="js/main.js" defer></script> -->
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
   </body>
 </html>

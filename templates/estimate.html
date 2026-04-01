@@ -24,7 +24,7 @@
     <header class="site-header">
       <div class="site-header__inner">
         <a class="logo" href="/">
-          <span class="logo__mark" aria-hidden="true">A</span>
+          <span class="logo_mark" aria-hidden="true">A</span>
           AutoValue
         </a>
         <button
@@ -74,12 +74,11 @@
           <div class="form-panel">
             <h2>Vehicle details</h2>
             <p class="form-panel__hint">
-              All fields below are required. Use Tab or the mouse to move
-              through the form.
+               * All fields below are required.
             </p>
-            <p id="catalog-status" class="catalog-status" aria-live="polite">
+            <!-- <p id="catalog-status" class="catalog-status" aria-live="polite">
               Loading vehicle names…
-            </p>
+            </p> -->
             <form id="estimate-form" action="/predict" method="post" novalidate>
             <!-- <form id="estimate-form" action="#" method="post" novalidate> -->
               <div class="form-grid">
@@ -315,7 +314,9 @@
       </div>
     </footer>
 
-    <script src="js/vehicleAutocomplete.js" defer></script>
-    <script src="js/main.js" defer></script>
+    <!-- <script src="js/vehicleAutocomplete.js" defer></script> -->
+     <script src="{{ url_for('static', filename='js/vehicleAutocomplete.js') }}" defer></script>
+    <!-- <script src="js/main.js" defer></script> -->
+     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
   </body>
 </html>
