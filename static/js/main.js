@@ -114,8 +114,8 @@
   }
 
   form.addEventListener("submit", function (e) {
-    e.preventDefault();
     if (!validate()) {
+      e.preventDefault();
       showToast("Please fix the highlighted fields.");
       return;
     }
@@ -127,16 +127,5 @@
         priceEl.innerHTML = '<span class="spinner" aria-hidden="true"></span>';
       }
     }
-
-    window.setTimeout(function () {
-      if (resultCard) resultCard.classList.remove("is-loading");
-      if (priceEl) {
-        priceEl.textContent = "—";
-      }
-      if (submitBtn) submitBtn.disabled = false;
-      showToast(
-        "Form submitted. Connect the pricing service to show a live estimate here.",
-      );
-    }, 650);
   });
 })();

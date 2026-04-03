@@ -176,26 +176,27 @@ def about():
 
 @app.route('/estimate')
 def estimate():
-    return render_template('estimate.html', metrics=model_metrics)
+    return render_template('estimate.html', metrics=model_metrics, price=None, error=None, form_data={})
 
 @app.route('/predict', methods=['POST'])
 def predict():
     # Extract form data and convert types safely
     try:
+        form_data = request.form.to_dict(flat=True)
         user_input = {
-            'year': int(request.form['year']),
-            'km_driven': float(request.form['km_driven']),
-            'fuel': request.form['fuel'],
-            'seller_type': request.form['seller_type'],
-            'transmission': request.form['transmission'],
-            'owner': request.form['owner'],
-            'mileage': float(request.form['mileage']) if request.form['mileage'] else None,
-            'engine': float(request.form['engine']),
-            'max_power': float(request.form['max_power']),
-            'seats': float(request.form['seats']),
-            'brand': request.form['brand'],
-            'model': request.form['model'],
-            'brand_model': f"{request.form['brand']}_{request.form['model']}"
+            'year': int(form_data['year']),
+            'km_driven': float(form_data['km_driven']),
+            'fuel': form_data['fuel'],
+            'seller_type': form_data['seller_type'],
+            'transmission': form_data['transmission'],
+            'owner': form_data['owner'],
+            'mileage': float(form_data['mileage']) if form_data.get('mileage') else None,
+            'engine': float(form_data['engine']),
+            'max_power': float(form_data['max_power']),
+            'seats': float(form_data['seats']),
+            'brand': form_data['brand'],
+            'model': form_data['model'],
+            'brand_model': f"{form_data['brand']}_{form_data['model']}"
         }
 
         user_df = pd.DataFrame([user_input])
@@ -206,10 +207,22 @@ def predict():
         # Format the price nicely
         formatted_price = f"NPR {int(price):,}"
         
-        return render_template('index.html', metrics=model_metrics, price=formatted_price, form_data=request.form)
+        return render_template(
+            'estimate.html',
+            metrics=model_metrics,
+            price=formatted_price,
+            error=None,
+            form_data=form_data
+        )
     
     except Exception as e:
-        return render_template('index.html', metrics=model_metrics, error=str(e))
+        return render_template(
+            'estimate.html',
+            metrics=model_metrics,
+            price=None,
+            error=str(e),
+            form_data=request.form.to_dict(flat=True)
+        )
 
 if __name__ == '__main__':
 

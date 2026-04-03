@@ -85,6 +85,7 @@
                       type="text"
                       id="brand"
                       name="brand"
+                      value="{{ form_data.get('brand', '') }}"
                       required
                       autocomplete="off"
                       role="combobox"
@@ -109,6 +110,7 @@
                       type="text"
                       id="model"
                       name="model"
+                      value="{{ form_data.get('model', '') }}"
                       required
                       autocomplete="off"
                       role="combobox"
@@ -132,6 +134,7 @@
                     type="number"
                     id="year"
                     name="year"
+                    value="{{ form_data.get('year', '') }}"
                     placeholder="Eg.: 2019"
                     min="1980"
                     max="2030"
@@ -145,6 +148,7 @@
                     type="number"
                     id="km_driven"
                     name="km_driven"
+                    value="{{ form_data.get('km_driven', '') }}"
                     placeholder="Eg.: 10000"
                     min="0"
                     step="1"
@@ -155,41 +159,41 @@
                 <div class="field" data-field="fuel">
                   <label for="fuel">Fuel type</label>
                   <select id="fuel" name="fuel">
-                    <option value="">Select the Fuel type</option>
-                    <option value="CNG">CNG</option>
-                    <option value="Petrol">Petrol</option>
-                    <option value="Diesel">Diesel</option>
-                    <option value="LPG">LPG</option>
+                    <option value="" {% if form_data.get('fuel', '') == '' %}selected{% endif %}>Select the Fuel type</option>
+                    <option value="CNG" {% if form_data.get('fuel') == 'CNG' %}selected{% endif %}>CNG</option>
+                    <option value="Petrol" {% if form_data.get('fuel') == 'Petrol' %}selected{% endif %}>Petrol</option>
+                    <option value="Diesel" {% if form_data.get('fuel') == 'Diesel' %}selected{% endif %}>Diesel</option>
+                    <option value="LPG" {% if form_data.get('fuel') == 'LPG' %}selected{% endif %}>LPG</option>
                   </select>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="transmission">
                   <label for="transmission">Transmission</label>
                   <select id="transmission" name="transmission">
-                    <option value="">Select the Transmission type</option>
-                    <option value="Manual">Manual</option>
-                    <option value="Automatic">Automatic</option>
+                    <option value="" {% if form_data.get('transmission', '') == '' %}selected{% endif %}>Select the Transmission type</option>
+                    <option value="Manual" {% if form_data.get('transmission') == 'Manual' %}selected{% endif %}>Manual</option>
+                    <option value="Automatic" {% if form_data.get('transmission') == 'Automatic' %}selected{% endif %}>Automatic</option>
                   </select>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="seller_type">
                   <label for="seller_type">Seller type</label>
                   <select id="seller_type" name="seller_type">
-                    <option value="">Select Seller type</option>
-                    <option value="Individual">Individual</option>
-                    <option value="Dealer">Dealer</option>
-                    <option value="Trustmark Dealer">Trustmark Dealer</option>
+                    <option value="" {% if form_data.get('seller_type', '') == '' %}selected{% endif %}>Select Seller type</option>
+                    <option value="Individual" {% if form_data.get('seller_type') == 'Individual' %}selected{% endif %}>Individual</option>
+                    <option value="Dealer" {% if form_data.get('seller_type') == 'Dealer' %}selected{% endif %}>Dealer</option>
+                    <option value="Trustmark Dealer" {% if form_data.get('seller_type') == 'Trustmark Dealer' %}selected{% endif %}>Trustmark Dealer</option>
                   </select>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="owner">
                   <label for="owner">Owner</label>
                   <select id="owner" name="owner">
-                    <option value="">Select Owner type</option>
-                    <option value="First Owner">First Owner</option>
-                    <option value="Second Owner" selected>Second Owner</option>
-                    <option value="Third Owner">Third Owner</option>
-                    <option value="Fourth &amp; Above Owner">
+                    <option value="" {% if form_data.get('owner', '') == '' %}selected{% endif %}>Select Owner type</option>
+                    <option value="First Owner" {% if form_data.get('owner') == 'First Owner' %}selected{% endif %}>First Owner</option>
+                    <option value="Second Owner" {% if form_data.get('owner', 'Second Owner') == 'Second Owner' %}selected{% endif %}>Second Owner</option>
+                    <option value="Third Owner" {% if form_data.get('owner') == 'Third Owner' %}selected{% endif %}>Third Owner</option>
+                    <option value="Fourth &amp; Above Owner" {% if form_data.get('owner') == 'Fourth & Above Owner' %}selected{% endif %}>
                       Fourth &amp; Above Owner
                     </option>
                   </select>
@@ -201,6 +205,7 @@
                     type="number"
                     id="mileage"
                     name="mileage"
+                    value="{{ form_data.get('mileage', '') }}"
                     placeholder="Eg.: 20.0"
                     min="0.1"
                     step="0.1"
@@ -214,6 +219,7 @@
                     type="number"
                     id="engine"
                     name="engine"
+                    value="{{ form_data.get('engine', '') }}"
                     placeholder="Eg.: 796"
                     min="1"
                     step="0.1"
@@ -227,6 +233,7 @@
                     type="number"
                     id="max_power"
                     name="max_power"
+                    value="{{ form_data.get('max_power', '') }}"
                     placeholder="Eg.: 40.3"
                     min="0.1"
                     step="0.1"
@@ -240,6 +247,7 @@
                     type="number"
                     id="seats"
                     name="seats"
+                    value="{{ form_data.get('seats', '') }}"
                     placeholder="Eg.: 4"
                     min="2"
                     max="12"
@@ -270,10 +278,16 @@
                 data-result-price
                 aria-live="polite"
               >
-                —
+                {{ price if price else '—' }}
               </div>
               <p class="result-card__note">
+                {% if error %}
+                Could not generate estimate: {{ error }}
+                {% elif price %}
+                Prediction generated from your submitted vehicle details.
+                {% else %}
                 After you submit the form, your estimated price appears here.
+                {% endif %}
               </p>
             </div>
             <!-- <div class="api-hint">
