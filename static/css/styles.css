@@ -116,7 +116,7 @@ main {
   box-shadow: 0 1px 0 rgba(26, 35, 50, 0.04);
 }
 
-.site-header__inner {
+.site-header-inner {
   width: 100%;
   max-width: var(--max);
   margin: 0 auto;

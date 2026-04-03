@@ -1,7 +1,8 @@
 (function () {
   "use strict";
 
-  var CATALOG_URL = "data/vehicle_catalog.json";
+  var CATALOG_URL =
+    window.VEHICLE_CATALOG_URL || "/static/data/vehicle_catalog.json";
   var MAX_SUGGESTIONS = 35;
 
   var catalog = null;
@@ -165,7 +166,12 @@
         activeIndex = Math.max(activeIndex - 1, 0);
         highlight(opts);
       }
-      if (e.key === "Enter" && !listEl.hidden && activeIndex >= 0 && opts[activeIndex]) {
+      if (
+        e.key === "Enter" &&
+        !listEl.hidden &&
+        activeIndex >= 0 &&
+        opts[activeIndex]
+      ) {
         e.preventDefault();
         opts[activeIndex].click();
       }
@@ -251,7 +257,7 @@
         setStatus(
           catalogStatus,
           "Vehicle list ready — " + catalog.brandCount + " brands available.",
-          false
+          false,
         );
         lastBrand = brandInput.value.trim();
         brandCombo.refresh();
@@ -261,7 +267,7 @@
         setStatus(
           catalogStatus,
           "Could not load suggestions. Use a local web server (e.g. python -m http.server) from the frontend folder, or ask your team to rebuild the vehicle list.",
-          true
+          true,
         );
       });
   }
