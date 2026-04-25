@@ -52,12 +52,6 @@
       });
   }
 
-  function sourceHint(source) {
-    if (source === "operational") return "In system";
-    if (source === "catalog") return "Catalog";
-    return "";
-  }
-
   function setStatus(el, msg, isError) {
     if (!el) return;
     el.textContent = msg || "";
@@ -114,17 +108,6 @@
         var value = document.createElement("span");
         value.textContent = item.value;
         row.appendChild(value);
-
-        if (item.source) {
-          var meta = document.createElement("span");
-          var metaClass = "combo__meta";
-          if (item.source === "operational") {
-            metaClass += " combo__meta--operational";
-          }
-          meta.className = metaClass;
-          meta.textContent = sourceHint(item.source);
-          row.appendChild(meta);
-        }
 
         li.appendChild(row);
         listEl.appendChild(li);
@@ -246,17 +229,8 @@
 
     var lastBrand = "";
 
-    function statusFromSource(source, prefix) {
-      if (!source) {
-        setStatus(catalogStatus, prefix, false);
-        return;
-      }
-
-      if (source === "operational") {
-        setStatus(catalogStatus, prefix + " Source: operational data.", false);
-        return;
-      }
-      setStatus(catalogStatus, prefix + " Source: catalog fallback.", false);
+    function setAutocompleteStatus(message) {
+      setStatus(catalogStatus, message, false);
     }
 
     function mapBrandSuggestions(payload) {
@@ -317,14 +291,14 @@
       },
       getItems: function (q) {
         return fetchAutocomplete(q, "").then(function (payload) {
-          statusFromSource(payload.source, "Brand suggestions ready.");
+          setAutocompleteStatus("Brand suggestions ready.");
           return mapBrandSuggestions(payload);
         });
       },
       onSelect: function (item) {
         if (!item) return;
         brandInput.dataset.suggestionSource = item.source || "";
-        statusFromSource(item.source, "Brand selected.");
+        setAutocompleteStatus("Brand selected.");
       },
     });
 
@@ -338,17 +312,14 @@
         var b = brandInput.value.trim();
         if (!b) return null;
         return fetchAutocomplete(q, b).then(function (payload) {
-          statusFromSource(
-            payload.source,
-            "Model suggestions for " + b + " ready.",
-          );
+          setAutocompleteStatus("Model suggestions for " + b + " ready.");
           return mapModelSuggestions(payload);
         });
       },
       onSelect: function (item) {
         if (!item) return;
         modelInput.dataset.suggestionSource = item.source || "";
-        statusFromSource(item.source, "Model selected.");
+        setAutocompleteStatus("Model selected.");
       },
     });
 
@@ -382,17 +353,11 @@
     modelCombo.refresh();
 
     if (brandInput.value.trim()) {
-      statusFromSource(
-        brandInput.dataset.suggestionSource || "",
-        "Brand value set.",
-      );
+      setAutocompleteStatus("Brand value set.");
     }
 
     if (modelInput.value.trim()) {
-      statusFromSource(
-        modelInput.dataset.suggestionSource || "",
-        "Model value set.",
-      );
+      setAutocompleteStatus("Model value set.");
     }
   }
 
