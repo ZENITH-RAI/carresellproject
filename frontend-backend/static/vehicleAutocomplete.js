@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var CATALOG_URL = "./vehicle_catalog.json";
+  var CATALOG_URL = "/static/vehicle_catalog.json";
   var MAX_SUGGESTIONS = 35;
 
   var catalog = null;

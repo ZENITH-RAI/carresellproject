@@ -14,14 +14,17 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
       <div class="site-header-inner">
-        <a class="logo" href="index.html">
+        <a class="logo" href="{{ url_for('home_page') }}">
           <span class="logo_mark" aria-hidden="true">AV</span>
           AutoValue
         </a>
@@ -47,9 +50,9 @@
           </svg>
         </button>
         <nav class="nav" aria-label="Primary">
-          <a href="index.html" aria-current="page">Home</a>
-          <a href="estimate.html">Estimator</a>
-          <a href="about.html">About</a>
+          <a href="{{ url_for('home_page') }}" aria-current="page">Home</a>
+          <a href="{{ url_for('estimate_page') }}">Estimator</a>
+          <a href="{{ url_for('about_page') }}">About</a>
         </nav>
       </div>
     </header>
@@ -66,7 +69,7 @@
               selling.
             </p>
             <div class="hero__actions">
-              <a class="btn btn--primary" href="estimate.html"
+              <a class="btn btn--primary" href="{{ url_for('estimate_page') }}"
                 >Start your estimate</a
               >
               <a class="btn btn--ghost" href="#how-it-works"
@@ -134,7 +137,7 @@
 
           <div class="cta-strip">
             <p>Ready to try it?</p>
-            <a class="btn btn--light" href="estimate.html"
+            <a class="btn btn--light" href="{{ url_for('estimate_page') }}"
               >Open the price estimator</a
             >
           </div>
@@ -234,5 +237,5 @@
       </div>
     </footer>
   </body>
-  <script src="./main.js"></script>
+  <script src="{{ url_for('static', filename='main.js') }}"></script>
 </html>

@@ -14,14 +14,17 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
       <div class="site-header-inner">
-        <a class="logo" href="index.html">
+        <a class="logo" href="{{ url_for('home_page') }}">
           <span class="logo_mark" aria-hidden="true">A</span>
           AutoValue
         </a>
@@ -47,9 +50,11 @@
           </svg>
         </button>
         <nav class="nav" aria-label="Primary">
-          <a href="index.html">Home</a>
-          <a href="estimate.html" aria-current="page">Estimator</a>
-          <a href="about.html">About</a>
+          <a href="{{ url_for('home_page') }}">Home</a>
+          <a href="{{ url_for('estimate_page') }}" aria-current="page"
+            >Estimator</a
+          >
+          <a href="{{ url_for('about_page') }}">About</a>
         </nav>
       </div>
     </header>
@@ -271,7 +276,7 @@
             <!-- <div class="api-hint">
               <strong>Note:</strong> If you do not see a price after submitting,
               the live calculation may still be connected by your team. See
-              <a href="about.html">About</a> for project details.
+              <a href="{{ url_for('about_page') }}">About</a> for project details.
             </div> -->
           </aside>
         </div>
@@ -301,7 +306,7 @@
         </p>
       </div>
     </footer>
-    <script src="./main.js"></script>
-    <script src="./vehicleAutocomplete.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    <script src="{{ url_for('static', filename='vehicleAutocomplete.js') }}"></script>
   </body>
 </html>
