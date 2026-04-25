@@ -30,28 +30,6 @@ def _normalize_text(value):
     return " ".join(str(value or "").strip().lower().split())
 
 
-# Score how well a brand/model label matches a user query for autocomplete ranking.
-def _score_match(brand_norm, model_norm, label_norm, query_norm):
-    if not query_norm:
-        return 1
-
-    if (
-        label_norm == query_norm
-        or brand_norm == query_norm
-        or model_norm == query_norm
-    ):
-        return 120
-    if (
-        label_norm.startswith(query_norm)
-        or brand_norm.startswith(query_norm)
-        or model_norm.startswith(query_norm)
-    ):
-        return 90
-    if query_norm in label_norm:
-        return 70
-    return 0
-
-
 # Build a deduplicated searchable index of brand/model pairs with listing counts.
 def _build_search_index(df):
     grouped = (
@@ -170,15 +148,24 @@ def _search_index(index_df, query, brand_filter, include_counts=False):
     if filtered.empty:
         return []
 
-    filtered['match_score'] = filtered.apply(
-        lambda row: _score_match(
-            row['brand_norm'],
-            row['model_norm'],
-            row['label_norm'],
-            query_norm,
-        ),
-        axis=1,
-    )
+    if not query_norm:
+        filtered['match_score'] = 1
+    else:
+        exact_mask = (
+            (filtered['label_norm'] == query_norm)
+            | (filtered['brand_norm'] == query_norm)
+            | (filtered['model_norm'] == query_norm)
+        )
+        prefix_mask = (
+            filtered['label_norm'].str.startswith(query_norm)
+            | filtered['brand_norm'].str.startswith(query_norm)
+            | filtered['model_norm'].str.startswith(query_norm)
+        )
+
+        filtered['match_score'] = 70
+        filtered.loc[prefix_mask, 'match_score'] = 90
+        filtered.loc[exact_mask, 'match_score'] = 120
+
     filtered = filtered[filtered['match_score'] > 0]
     if filtered.empty:
         return []

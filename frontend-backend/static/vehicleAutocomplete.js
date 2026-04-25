@@ -6,6 +6,7 @@
   var REQUEST_DEBOUNCE_MS = 140;
   var responseCache = new Map();
 
+  // Keep cache keys stable across case/spacing differences.
   function normalize(s) {
     return String(s || "")
       .toLowerCase()
@@ -13,6 +14,7 @@
       .replace(/\s+/g, " ");
   }
 
+  // Delay requests while user is typing to reduce network chatter.
   function debounce(fn, waitMs) {
     var timer = null;
     return function () {
@@ -29,6 +31,7 @@
     var b = String(brand || "");
     var key = normalize(q) + "::" + normalize(b);
 
+    // Serve repeated requests immediately when the same query is typed again.
     if (responseCache.has(key)) {
       return Promise.resolve(responseCache.get(key));
     }
@@ -47,6 +50,7 @@
         return r.json();
       })
       .then(function (payload) {
+        // Cache successful responses for subsequent identical lookups.
         responseCache.set(key, payload);
         return payload;
       });
@@ -100,7 +104,6 @@
         li.id = input.id + "-opt-" + i;
         li.dataset.index = String(i);
         li.dataset.value = item.value;
-        li.dataset.source = item.source || "";
 
         var row = document.createElement("span");
         row.className = "combo__row";
@@ -123,6 +126,7 @@
     }
 
     function refreshNow() {
+      // Token guards against out-of-order async responses overriding newer results.
       var thisToken = ++requestToken;
       var q = input.value;
 
@@ -170,6 +174,7 @@
       input.focus();
     });
 
+    // Keyboard navigation for accessibility and fast selection.
     input.addEventListener("keydown", function (e) {
       var opts = listEl.querySelectorAll("li[role='option']");
       if (e.key === "Escape") {
@@ -229,10 +234,6 @@
 
     var lastBrand = "";
 
-    function setAutocompleteStatus(message) {
-      setStatus(catalogStatus, message, false);
-    }
-
     function mapBrandSuggestions(payload) {
       var seen = new Set();
       var result = [];
@@ -250,10 +251,10 @@
         if (seen.has(key)) {
           continue;
         }
+        // Deduplicate brand labels from mixed data sources.
         seen.add(key);
         result.push({
           value: brand,
-          source: row.source || payload.source || "",
         });
       }
       return result;
@@ -273,7 +274,6 @@
         }
         mapped.push({
           value: model,
-          source: row.source || payload.source || "",
           brand: row.brand || "",
           model: model,
         });
@@ -291,14 +291,13 @@
       },
       getItems: function (q) {
         return fetchAutocomplete(q, "").then(function (payload) {
-          setAutocompleteStatus("Brand suggestions ready.");
+          setStatus(catalogStatus, "Brand suggestions ready.", false);
           return mapBrandSuggestions(payload);
         });
       },
       onSelect: function (item) {
         if (!item) return;
-        brandInput.dataset.suggestionSource = item.source || "";
-        setAutocompleteStatus("Brand selected.");
+        setStatus(catalogStatus, "Brand selected.", false);
       },
     });
 
@@ -310,16 +309,20 @@
       },
       getItems: function (q) {
         var b = brandInput.value.trim();
+        // Model suggestions are scoped to the currently selected brand.
         if (!b) return null;
         return fetchAutocomplete(q, b).then(function (payload) {
-          setAutocompleteStatus("Model suggestions for " + b + " ready.");
+          setStatus(
+            catalogStatus,
+            "Model suggestions for " + b + " ready.",
+            false,
+          );
           return mapModelSuggestions(payload);
         });
       },
       onSelect: function (item) {
         if (!item) return;
-        modelInput.dataset.suggestionSource = item.source || "";
-        setAutocompleteStatus("Model selected.");
+        setStatus(catalogStatus, "Model selected.", false);
       },
     });
 
@@ -329,8 +332,8 @@
       lastBrand = b;
       var mv = modelInput.value.trim();
       if (mv) {
+        // Clear stale model when brand changes.
         modelInput.value = "";
-        modelInput.dataset.suggestionSource = "";
       }
 
       if (!b) {
@@ -353,11 +356,11 @@
     modelCombo.refresh();
 
     if (brandInput.value.trim()) {
-      setAutocompleteStatus("Brand value set.");
+      setStatus(catalogStatus, "Brand value set.", false);
     }
 
     if (modelInput.value.trim()) {
-      setAutocompleteStatus("Model value set.");
+      setStatus(catalogStatus, "Model value set.", false);
     }
   }
 
