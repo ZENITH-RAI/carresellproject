@@ -1,11 +1,10 @@
 (function () {
   "use strict";
 
-  var CATALOG_URL = "/static/vehicle_catalog.json";
+  var AUTOCOMPLETE_URL = "/autocomplete";
   var MAX_SUGGESTIONS = 35;
-
-  var catalog = null;
-  var catalogError = null;
+  var REQUEST_DEBOUNCE_MS = 140;
+  var responseCache = new Map();
 
   function normalize(s) {
     return String(s || "")
@@ -14,76 +13,71 @@
       .replace(/\s+/g, " ");
   }
 
-  function scoreMatch(text, query) {
-    var t = normalize(text);
-    var q = normalize(query);
-    if (!q) return 1;
-    if (t === q) return 100;
-    if (t.startsWith(q)) return 85;
-    var words = t.split(" ");
-    for (var i = 0; i < words.length; i++) {
-      if (words[i].startsWith(q)) return 72;
-    }
-    if (t.indexOf(q) !== -1) return 55;
-    var qi = 0;
-    for (var j = 0; j < t.length && qi < q.length; j++) {
-      if (t[j] === q[qi]) qi++;
-    }
-    if (qi === q.length) return 35;
-    return 0;
+  function debounce(fn, waitMs) {
+    var timer = null;
+    return function () {
+      var args = arguments;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(function () {
+        fn.apply(null, args);
+      }, waitMs);
+    };
   }
 
-  function filterAndSort(items, query) {
-    var scored = [];
-    for (var i = 0; i < items.length; i++) {
-      var s = scoreMatch(items[i], query);
-      if (s > 0) scored.push({ value: items[i], score: s });
-    }
-    scored.sort(function (a, b) {
-      if (b.score !== a.score) return b.score - a.score;
-      return a.value.localeCompare(b.value);
-    });
-    return scored.map(function (x) {
-      return x.value;
-    });
-  }
+  function fetchAutocomplete(query, brand) {
+    var q = String(query || "");
+    var b = String(brand || "");
+    var key = normalize(q) + "::" + normalize(b);
 
-  function loadCatalog() {
-    return fetch(CATALOG_URL)
+    if (responseCache.has(key)) {
+      return Promise.resolve(responseCache.get(key));
+    }
+
+    var params = new URLSearchParams();
+    params.set("q", q);
+    if (b) {
+      params.set("brand", b);
+    }
+
+    return fetch(AUTOCOMPLETE_URL + "?" + params.toString())
       .then(function (r) {
-        if (!r.ok) throw new Error("Could not load vehicle catalog");
+        if (!r.ok) {
+          throw new Error("Autocomplete request failed");
+        }
         return r.json();
       })
-      .then(function (data) {
-        catalog = data;
-        catalogError = null;
-        return data;
-      })
-      .catch(function (e) {
-        catalogError = e.message || "Load failed";
-        throw e;
+      .then(function (payload) {
+        responseCache.set(key, payload);
+        return payload;
       });
   }
 
-  function getBrandList() {
-    if (!catalog || !catalog.brands) return [];
-    return catalog.brands;
+  function sourceHint(source) {
+    if (source === "operational") return "In system";
+    if (source === "catalog") return "Catalog";
+    return "";
   }
 
-  function getModelsForBrand(brand) {
-    if (!catalog || !catalog.modelsByBrand) return [];
-    var list = catalog.modelsByBrand[brand];
-    return Array.isArray(list) ? list : [];
+  function setStatus(el, msg, isError) {
+    if (!el) return;
+    el.textContent = msg || "";
+    el.style.color = isError ? "var(--error)" : "var(--text-muted)";
   }
 
   function attachCombo(options) {
     var input = options.input;
     var listEl = options.listEl;
     var getItems = options.getItems;
+    var onSelect = options.onSelect || function () {};
+    var setStatusMessage = options.setStatusMessage || function () {};
+    var emptyMessage = options.emptyMessage || "No matches";
+    var nullMessage = options.nullMessage || "Choose a brand first";
     var container = input.closest(".combo");
     if (!input || !listEl) return;
 
     var activeIndex = -1;
+    var currentItems = [];
+    var requestToken = 0;
 
     function setOpen(open) {
       listEl.hidden = !open;
@@ -93,45 +87,91 @@
     function renderItems(items) {
       listEl.innerHTML = "";
       activeIndex = -1;
+      currentItems = items;
+
       if (items === null) {
         var hint = document.createElement("li");
         hint.className = "combo__empty";
         hint.setAttribute("role", "presentation");
-        hint.textContent = "Choose a brand first";
+        hint.textContent = nullMessage;
         listEl.appendChild(hint);
         return;
       }
+
       var slice = items.slice(0, MAX_SUGGESTIONS);
       for (var i = 0; i < slice.length; i++) {
         var li = document.createElement("li");
+        var item = slice[i];
         li.setAttribute("role", "option");
         li.id = input.id + "-opt-" + i;
-        li.textContent = slice[i];
-        li.dataset.value = slice[i];
+        li.dataset.index = String(i);
+        li.dataset.value = item.value;
+        li.dataset.source = item.source || "";
+
+        var row = document.createElement("span");
+        row.className = "combo__row";
+
+        var value = document.createElement("span");
+        value.textContent = item.value;
+        row.appendChild(value);
+
+        if (item.source) {
+          var meta = document.createElement("span");
+          var metaClass = "combo__meta";
+          if (item.source === "operational") {
+            metaClass += " combo__meta--operational";
+          }
+          meta.className = metaClass;
+          meta.textContent = sourceHint(item.source);
+          row.appendChild(meta);
+        }
+
+        li.appendChild(row);
         listEl.appendChild(li);
       }
+
       if (slice.length === 0) {
         var empty = document.createElement("li");
         empty.className = "combo__empty";
         empty.setAttribute("role", "presentation");
-        empty.textContent = "No matches";
+        empty.textContent = emptyMessage;
         listEl.appendChild(empty);
       }
     }
 
-    function refresh() {
+    function refreshNow() {
+      var thisToken = ++requestToken;
       var q = input.value;
-      var items = getItems(q);
-      renderItems(items);
+
+      Promise.resolve(getItems(q))
+        .then(function (items) {
+          if (thisToken !== requestToken) {
+            return;
+          }
+          if (items === null) {
+            renderItems(null);
+            return;
+          }
+          renderItems(Array.isArray(items) ? items : []);
+        })
+        .catch(function () {
+          if (thisToken !== requestToken) {
+            return;
+          }
+          setStatusMessage("Could not load autocomplete suggestions.", true);
+          renderItems([]);
+        });
     }
 
+    var refreshDebounced = debounce(refreshNow, REQUEST_DEBOUNCE_MS);
+
     input.addEventListener("input", function () {
-      refresh();
+      refreshDebounced();
       setOpen(true);
     });
 
     input.addEventListener("focus", function () {
-      refresh();
+      refreshNow();
       setOpen(true);
     });
 
@@ -139,6 +179,8 @@
       var li = e.target.closest("li[role='option']");
       if (!li || !li.dataset.value) return;
       input.value = li.dataset.value;
+      var item = currentItems[Number(li.dataset.index)] || null;
+      onSelect(item);
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(new Event("change", { bubbles: true }));
       setOpen(false);
@@ -154,7 +196,7 @@
       if (e.key === "ArrowDown") {
         e.preventDefault();
         if (listEl.hidden) {
-          refresh();
+          refreshNow();
           setOpen(true);
         }
         activeIndex = Math.min(activeIndex + 1, opts.length - 1);
@@ -187,13 +229,7 @@
       if (container && !container.contains(e.target)) setOpen(false);
     });
 
-    return { refresh: refresh, setOpen: setOpen };
-  }
-
-  function setStatus(el, msg, isError) {
-    if (!el) return;
-    el.textContent = msg || "";
-    el.style.color = isError ? "var(--error)" : "var(--text-muted)";
+    return { refresh: refreshNow, setOpen: setOpen };
   }
 
   function init() {
@@ -210,27 +246,109 @@
 
     var lastBrand = "";
 
+    function statusFromSource(source, prefix) {
+      if (!source) {
+        setStatus(catalogStatus, prefix, false);
+        return;
+      }
+
+      if (source === "operational") {
+        setStatus(catalogStatus, prefix + " Source: operational data.", false);
+        return;
+      }
+      setStatus(catalogStatus, prefix + " Source: catalog fallback.", false);
+    }
+
+    function mapBrandSuggestions(payload) {
+      var seen = new Set();
+      var result = [];
+      var suggestions = Array.isArray(payload.suggestions)
+        ? payload.suggestions
+        : [];
+
+      for (var i = 0; i < suggestions.length; i++) {
+        var row = suggestions[i];
+        var brand = String(row.brand || "").trim();
+        if (!brand) {
+          continue;
+        }
+        var key = normalize(brand);
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        result.push({
+          value: brand,
+          source: row.source || payload.source || "",
+        });
+      }
+      return result;
+    }
+
+    function mapModelSuggestions(payload) {
+      var suggestions = Array.isArray(payload.suggestions)
+        ? payload.suggestions
+        : [];
+      var mapped = [];
+
+      for (var i = 0; i < suggestions.length; i++) {
+        var row = suggestions[i];
+        var model = String(row.model || "").trim();
+        if (!model) {
+          continue;
+        }
+        mapped.push({
+          value: model,
+          source: row.source || payload.source || "",
+          brand: row.brand || "",
+          model: model,
+        });
+      }
+
+      return mapped;
+    }
+
     var brandCombo = attachCombo({
       input: brandInput,
       listEl: brandList,
+      emptyMessage: "No brand matches",
+      setStatusMessage: function (msg, isError) {
+        setStatus(catalogStatus, msg, isError);
+      },
       getItems: function (q) {
-        if (!catalog) return [];
-        var brands = getBrandList();
-        if (!normalize(q)) return brands;
-        return filterAndSort(brands, q);
+        return fetchAutocomplete(q, "").then(function (payload) {
+          statusFromSource(payload.source, "Brand suggestions ready.");
+          return mapBrandSuggestions(payload);
+        });
+      },
+      onSelect: function (item) {
+        if (!item) return;
+        brandInput.dataset.suggestionSource = item.source || "";
+        statusFromSource(item.source, "Brand selected.");
       },
     });
 
     var modelCombo = attachCombo({
       input: modelInput,
       listEl: modelList,
+      setStatusMessage: function (msg, isError) {
+        setStatus(catalogStatus, msg, isError);
+      },
       getItems: function (q) {
-        if (!catalog) return [];
         var b = brandInput.value.trim();
         if (!b) return null;
-        var models = getModelsForBrand(b);
-        if (!normalize(q)) return models.slice(0, MAX_SUGGESTIONS);
-        return filterAndSort(models, q);
+        return fetchAutocomplete(q, b).then(function (payload) {
+          statusFromSource(
+            payload.source,
+            "Model suggestions for " + b + " ready.",
+          );
+          return mapModelSuggestions(payload);
+        });
+      },
+      onSelect: function (item) {
+        if (!item) return;
+        modelInput.dataset.suggestionSource = item.source || "";
+        statusFromSource(item.source, "Model selected.");
       },
     });
 
@@ -238,11 +356,18 @@
       var b = brandInput.value.trim();
       if (b === lastBrand) return;
       lastBrand = b;
-      var models = getModelsForBrand(b);
       var mv = modelInput.value.trim();
-      if (mv && models.indexOf(mv) === -1) {
+      if (mv) {
         modelInput.value = "";
+        modelInput.dataset.suggestionSource = "";
       }
+
+      if (!b) {
+        setStatus(catalogStatus, "Choose a brand first.", false);
+      } else {
+        setStatus(catalogStatus, "Type a model to get suggestions.", false);
+      }
+
       modelCombo.refresh();
     }
 
@@ -251,24 +376,24 @@
       window.setTimeout(syncModelAfterBrandChange, 120);
     });
 
-    loadCatalog()
-      .then(function () {
-        setStatus(
-          catalogStatus,
-          "Vehicle list ready — " + catalog.brandCount + " brands available.",
-          false,
-        );
-        lastBrand = brandInput.value.trim();
-        brandCombo.refresh();
-        modelCombo.refresh();
-      })
-      .catch(function () {
-        setStatus(
-          catalogStatus,
-          "Could not load suggestions. Use a local web server (e.g. python -m http.server) from the frontend folder, or ask your team to rebuild the vehicle list.",
-          true,
-        );
-      });
+    setStatus(catalogStatus, "Type to search vehicle brands.", false);
+    lastBrand = brandInput.value.trim();
+    brandCombo.refresh();
+    modelCombo.refresh();
+
+    if (brandInput.value.trim()) {
+      statusFromSource(
+        brandInput.dataset.suggestionSource || "",
+        "Brand value set.",
+      );
+    }
+
+    if (modelInput.value.trim()) {
+      statusFromSource(
+        modelInput.dataset.suggestionSource || "",
+        "Model value set.",
+      );
+    }
   }
 
   if (document.readyState === "loading") {

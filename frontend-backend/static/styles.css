@@ -651,6 +651,26 @@ main {
   line-height: 1.35;
 }
 
+.combo__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.combo__meta {
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.combo__meta--operational {
+  color: var(--success);
+}
+
 .combo__list li[role="option"]:hover,
 .combo__list li[role="option"].combo__option--active {
   background: var(--accent-dim);

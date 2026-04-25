@@ -1,3 +1,7 @@
+import json
+import os
+import time
+
 import pandas as pd
 import numpy as np
 from flask import Flask, render_template, request, jsonify
@@ -5,11 +9,208 @@ from flask import Flask, render_template, request, jsonify
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 CURRENT_YEAR = 2026
+AUTOCOMPLETE_LIMIT = 12
+CSV_CACHE_TTL_SECONDS = 15
+CSV_PATH = "UsedCars.csv"
+CATALOG_PATH = "static/vehicle_catalog.json"
+
 pipeline_instance = None
 model_instance = None
 model_metrics = {}
+catalog_index = pd.DataFrame()
+csv_cache = {
+    'loaded_at': 0.0,
+    'file_mtime': None,
+    'data': pd.DataFrame(),
+}
 
+
+# Normalize any text input for case-insensitive and space-consistent matching.
+def _normalize_text(value):
+    return " ".join(str(value or "").strip().lower().split())
+
+
+# Score how well a brand/model label matches a user query for autocomplete ranking.
+def _score_match(brand_norm, model_norm, label_norm, query_norm):
+    if not query_norm:
+        return 1
+
+    if (
+        label_norm == query_norm
+        or brand_norm == query_norm
+        or model_norm == query_norm
+    ):
+        return 120
+    if (
+        label_norm.startswith(query_norm)
+        or brand_norm.startswith(query_norm)
+        or model_norm.startswith(query_norm)
+    ):
+        return 90
+    if query_norm in label_norm:
+        return 70
+    return 0
+
+
+# Build a deduplicated searchable index of brand/model pairs with listing counts.
+def _build_search_index(df):
+    grouped = (
+        df.groupby(['brand', 'model'], dropna=False)
+        .size()
+        .reset_index(name='listing_count')
+    )
+    grouped['brand'] = grouped['brand'].fillna('').astype(str).str.strip()
+    grouped['model'] = grouped['model'].fillna('').astype(str).str.strip()
+    grouped = grouped[(grouped['brand'] != '') | (grouped['model'] != '')].copy()
+
+    grouped['label'] = (grouped['brand'] + ' ' + grouped['model']).str.strip()
+    grouped['brand_norm'] = grouped['brand'].map(_normalize_text)
+    grouped['model_norm'] = grouped['model'].map(_normalize_text)
+    grouped['label_norm'] = grouped['label'].map(_normalize_text)
+    return grouped
+
+
+# Load static catalog JSON once and transform it into a normalized in-memory index.
+def _load_catalog_index():
+    global catalog_index
+
+    try:
+        with open(CATALOG_PATH, 'r', encoding='utf-8') as f:
+            payload = json.load(f)
+
+        rows = []
+        models_by_brand = payload.get('modelsByBrand', {})
+        for brand in payload.get('brands', []):
+            for model in models_by_brand.get(brand, []):
+                rows.append({'brand': brand, 'model': model})
+
+        catalog_df = pd.DataFrame(rows)
+        if catalog_df.empty:
+            catalog_index = pd.DataFrame(
+                columns=['brand', 'model', 'label', 'brand_norm', 'model_norm', 'label_norm']
+            )
+            return
+
+        catalog_df = catalog_df.drop_duplicates(subset=['brand', 'model']).reset_index(drop=True)
+        catalog_df['brand'] = catalog_df['brand'].fillna('').astype(str).str.strip()
+        catalog_df['model'] = catalog_df['model'].fillna('').astype(str).str.strip()
+        catalog_df['label'] = (catalog_df['brand'] + ' ' + catalog_df['model']).str.strip()
+        catalog_df['brand_norm'] = catalog_df['brand'].map(_normalize_text)
+        catalog_df['model_norm'] = catalog_df['model'].map(_normalize_text)
+        catalog_df['label_norm'] = catalog_df['label'].map(_normalize_text)
+        catalog_index = catalog_df
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        catalog_index = pd.DataFrame(
+            columns=['brand', 'model', 'label', 'brand_norm', 'model_norm', 'label_norm']
+        )
+
+
+# Return cached operational CSV index, refreshing by TTL or file timestamp change.
+def _get_operational_index():
+    now = time.time()
+    try:
+        current_mtime = os.path.getmtime(CSV_PATH)
+    except OSError:
+        return pd.DataFrame(
+            columns=[
+                'brand', 'model', 'listing_count',
+                'label', 'brand_norm', 'model_norm', 'label_norm',
+            ]
+        )
+
+    is_fresh = (now - csv_cache['loaded_at']) < CSV_CACHE_TTL_SECONDS
+    is_same_file = csv_cache['file_mtime'] == current_mtime
+    if is_fresh and is_same_file and not csv_cache['data'].empty:
+        return csv_cache['data']
+
+    df = pd.read_csv(CSV_PATH, usecols=['name'])
+    split_name = df['name'].astype(str).str.strip().str.split()
+    df['brand'] = split_name.str[0].fillna('')
+    df['model'] = split_name.str[1:].str.join(' ').fillna('')
+    index_df = _build_search_index(df)
+
+    csv_cache['loaded_at'] = now
+    csv_cache['file_mtime'] = current_mtime
+    csv_cache['data'] = index_df
+    return index_df
+
+
+# Filter and rank a search index by query and optional brand, then return top suggestions.
+def _search_index(index_df, query, brand_filter, include_counts=False):
+    if index_df.empty:
+        return []
+
+    query_norm = _normalize_text(query)
+    filtered = index_df
+
+    brand_filter_norm = _normalize_text(brand_filter)
+    if brand_filter_norm:
+        filtered = filtered[filtered['brand_norm'] == brand_filter_norm]
+
+    if query_norm:
+        exact_mask = (
+            (filtered['label_norm'] == query_norm)
+            | (filtered['brand_norm'] == query_norm)
+            | (filtered['model_norm'] == query_norm)
+        )
+        prefix_mask = (
+            filtered['label_norm'].str.startswith(query_norm)
+            | filtered['brand_norm'].str.startswith(query_norm)
+            | filtered['model_norm'].str.startswith(query_norm)
+        )
+        contains_mask = (
+            filtered['label_norm'].str.contains(query_norm, regex=False)
+            | filtered['brand_norm'].str.contains(query_norm, regex=False)
+            | filtered['model_norm'].str.contains(query_norm, regex=False)
+        )
+        filtered = filtered[exact_mask | prefix_mask | contains_mask].copy()
+    else:
+        filtered = filtered.copy()
+
+    if filtered.empty:
+        return []
+
+    filtered['match_score'] = filtered.apply(
+        lambda row: _score_match(
+            row['brand_norm'],
+            row['model_norm'],
+            row['label_norm'],
+            query_norm,
+        ),
+        axis=1,
+    )
+    filtered = filtered[filtered['match_score'] > 0]
+    if filtered.empty:
+        return []
+
+    sort_columns = ['match_score']
+    ascending = [False]
+
+    if include_counts and 'listing_count' in filtered.columns:
+        sort_columns.append('listing_count')
+        ascending.append(False)
+
+    sort_columns.append('label')
+    ascending.append(True)
+    filtered = filtered.sort_values(sort_columns, ascending=ascending)
+
+    records = []
+    for _, row in filtered.head(AUTOCOMPLETE_LIMIT).iterrows():
+        record = {
+            'brand': row['brand'],
+            'model': row['model'],
+            'label': row['label'],
+        }
+        if include_counts and 'listing_count' in filtered.columns:
+            record['listing_count'] = int(row['listing_count'])
+        records.append(record)
+
+    return records
+
+
+# Feature pipeline that prepares tabular data for model training and inference.
 class FullPipeline:
+    # Initialize reusable preprocessing metadata and domain-specific brand flags.
     def __init__(self):
         self.numeric_cols = []
         self.mean_std = {}
@@ -17,6 +218,7 @@ class FullPipeline:
         self.feature_columns = []
         self.luxury_brands = ['BMW', 'Audi', 'Mercedes-Benz', 'Jaguar', 'Land', 'Volvo']
 
+    # Create engineered features from the raw car attributes.
     def feature_engineering(self, df):
         df = df.copy()
         df['car_age'] = CURRENT_YEAR - df['year']
@@ -27,6 +229,7 @@ class FullPipeline:
         df['is_luxury'] = df['brand'].isin(self.luxury_brands).astype(int)
         return df
 
+    # Fit preprocessing statistics on training data and return transformed features.
     def fit(self, df):
         df = self.feature_engineering(df)
         df = df.drop(columns=['selling_price'], errors='ignore')
@@ -45,6 +248,7 @@ class FullPipeline:
         self.feature_columns = df.columns.tolist()
         return df
 
+    # Apply learned preprocessing to new rows using fitted schema and scaling.
     def transform(self, df):
         df = self.feature_engineering(df)
         df = pd.get_dummies(df, drop_first=True)
@@ -61,7 +265,10 @@ class FullPipeline:
             df[col] = (df[col] - mean) / std
         return df
 
+
+# Lightweight SGD-based linear regressor used for price prediction.
 class SGDRegressor:
+    # Store optimizer hyperparameters and model weights.
     def __init__(self, lr=0.01, epochs=450, l2=0.01, batch_size=32):
         self.lr = lr
         self.epochs = epochs
@@ -70,6 +277,7 @@ class SGDRegressor:
         self.coef_ = None
         self.intercept_ = 0
 
+    # Train the model using mini-batch gradient descent with L2 regularization.
     def fit(self, X, y):
         X = np.asarray(X, dtype=np.float64)
         y = np.asarray(y, dtype=np.float64)
@@ -93,10 +301,13 @@ class SGDRegressor:
                 self.coef_ -= lr * grad_w
                 self.intercept_ -= lr * grad_b
 
+    # Predict target values for transformed feature rows.
     def predict(self, X):
         X = np.asarray(X, dtype=np.float64)
         return np.dot(X, self.coef_) + self.intercept_
 
+
+# Load dataset, train preprocessing/model objects, and compute quality metrics.
 def initialize_and_train():
     global pipeline_instance, model_instance, model_metrics
     print("Loading data and training model... This may take a moment.")
@@ -153,22 +364,73 @@ def initialize_and_train():
     }
     print("Training complete! Server ready.")
 
+
+_load_catalog_index()
+
+
+# Render the landing page.
 @app.route('/')
 def home_page():
     return render_template('index.html')
 
+
+# Render the estimator page with the form UI.
 @app.route('/estimate')
 def estimate_page():
     return render_template('estimate.html')
 
 
+# Render the about page.
 @app.route('/about')
 def about_page():
     return render_template('about.html')
 
+
+# Serve tiered autocomplete suggestions from operational data with catalog fallback.
+@app.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    query = request.args.get('q', default='', type=str)
+    brand_filter = request.args.get('brand', default='', type=str)
+
+    operational_index = _get_operational_index()
+    operational_results = _search_index(
+        operational_index,
+        query=query,
+        brand_filter=brand_filter,
+        include_counts=True,
+    )
+
+    if operational_results:
+        return jsonify({
+            'source': 'operational',
+            'query': query,
+            'brand_filter': brand_filter,
+            'suggestions': [
+                {**item, 'source': 'operational'} for item in operational_results
+            ],
+        })
+
+    catalog_results = _search_index(
+        catalog_index,
+        query=query,
+        brand_filter=brand_filter,
+        include_counts=False,
+    )
+
+    return jsonify({
+        'source': 'catalog',
+        'query': query,
+        'brand_filter': brand_filter,
+        'suggestions': [
+            {**item, 'source': 'catalog'} for item in catalog_results
+        ],
+    })
+
 # dummy price shown now
 # after final ML model, we replace it here
 
+
+# Validate request data, run the pricing pipeline, and return formatted prediction.
 @app.route('/predict', methods=['POST'])
 def predict():
 
@@ -201,8 +463,8 @@ def predict():
         user_df = pd.DataFrame([user_input])
         processed = pipeline_instance.transform(user_df)
         pred_log = model_instance.predict(processed)
-        # price = float(np.expm1(pred_log[0]))
-        price = 500000
+        price = float(np.expm1(pred_log[0]))
+        # price = 500000
         
         # Format the price nicely
         formatted_price = f"NPR {int(price):,}"
