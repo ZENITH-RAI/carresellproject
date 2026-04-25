@@ -282,6 +282,10 @@ main {
   width: 100%;
 }
 
+.estimate-submit {
+  margin-top: 1.5rem;
+}
+
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -576,7 +580,6 @@ main {
 
 .form-panel__hint {
   font-size: 0.9rem;
-  /* color: var(--text-muted); */
   color: red;
   margin: 0 0 1.5rem;
 }
@@ -848,7 +851,6 @@ main {
 /* Footer */
 .site-footer {
   margin-top: auto;
-  /* padding: 2rem 0; */
   border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -860,6 +862,5 @@ main {
 }
 
 .site-footer a:hover {
-  /* color: var(--accent); */
   color: black;
 }

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -173,7 +173,15 @@ def about_page():
 def predict():
 
     try:
-        form_data = request.form.to_dict(flat=True)
+        if pipeline_instance is None or model_instance is None:
+            initialize_and_train()
+
+        # Support both AJAX JSON payloads and regular form submissions.
+        is_json_request = request.is_json
+        form_data = request.get_json(silent=True) if is_json_request else request.form.to_dict(flat=True)
+        if not form_data:
+            return jsonify({'error': 'No input data received.'}), 400
+
         user_input = {
             'year': int(form_data['year']),
             'km_driven': float(form_data['km_driven']),
@@ -198,7 +206,10 @@ def predict():
         
         # Format the price nicely
         formatted_price = f"NPR {int(price):,}"
-        
+
+        if is_json_request:
+            return jsonify({'price': formatted_price, 'error': None})
+
         return render_template(
             'estimate.html',
             price=formatted_price,
@@ -207,6 +218,9 @@ def predict():
         )
     
     except Exception as e:
+        if request.is_json:
+            return jsonify({'price': None, 'error': str(e)}), 400
+
         return render_template(
             'estimate.html',
             price=None,

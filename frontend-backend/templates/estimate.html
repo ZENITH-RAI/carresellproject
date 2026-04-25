@@ -63,16 +63,12 @@
       <div class="wrap">
         <header class="page-head">
           <h1>Price estimator</h1>
-          <!-- <p>Complete the form below.</p> -->
         </header>
 
         <div class="estimator">
           <div class="form-panel">
             <h2>Vehicle details</h2>
             <p class="form-panel__hint">* All fields below are required.</p>
-            <!-- <p id="catalog-status" class="catalog-status" aria-live="polite">
-              Loading vehicle names…
-            </p> -->
             <form id="estimate-form" action="#" method="post" novalidate>
               <div class="form-grid">
                 <div class="field" data-field="brand">
@@ -249,8 +245,7 @@
 
               <button
                 type="submit"
-                class="btn btn--primary btn--block"
-                style="margin-top: 1.5rem"
+                class="btn btn--primary btn--block estimate-submit"
               >
                 Estimate fair value
               </button>
@@ -273,11 +268,6 @@
                 After you submit the form, your estimated price appears here.
               </p>
             </div>
-            <!-- <div class="api-hint">
-              <strong>Note:</strong> If you do not see a price after submitting,
-              the live calculation may still be connected by your team. See
-              <a href="{{ url_for('about_page') }}">About</a> for project details.
-            </div> -->
           </aside>
         </div>
       </div>
