@@ -133,46 +133,151 @@
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="fuel">
-                  <label for="fuel">Fuel type</label>
-                  <select id="fuel" name="fuel">
-                    <option value="">Select the Fuel type</option>
-                    <option value="CNG">CNG</option>
-                    <option value="Petrol">Petrol</option>
-                    <option value="Diesel">Diesel</option>
-                    <option value="LPG">LPG</option>
-                  </select>
+                  <fieldset class="radio-group">
+                    <legend>Fuel type</legend>
+                    <label class="radio-choice" for="fuel_cng">
+                      <input
+                        type="radio"
+                        id="fuel_cng"
+                        name="fuel"
+                        value="CNG"
+                        required
+                      />
+                      <span>CNG</span>
+                    </label>
+                    <label class="radio-choice" for="fuel_petrol">
+                      <input
+                        type="radio"
+                        id="fuel_petrol"
+                        name="fuel"
+                        value="Petrol"
+                        checked
+                      />
+                      <span>Petrol</span>
+                    </label>
+                    <label class="radio-choice" for="fuel_diesel">
+                      <input
+                        type="radio"
+                        id="fuel_diesel"
+                        name="fuel"
+                        value="Diesel"
+                      />
+                      <span>Diesel</span>
+                    </label>
+                    <label class="radio-choice" for="fuel_lpg">
+                      <input
+                        type="radio"
+                        id="fuel_lpg"
+                        name="fuel"
+                        value="LPG"
+                      />
+                      <span>LPG</span>
+                    </label>
+                  </fieldset>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="transmission">
-                  <label for="transmission">Transmission</label>
-                  <select id="transmission" name="transmission">
-                    <option value="">Select the Transmission type</option>
-                    <option value="Manual">Manual</option>
-                    <option value="Automatic">Automatic</option>
-                  </select>
+                  <fieldset class="radio-group">
+                    <legend>Transmission</legend>
+                    <label class="radio-choice" for="transmission_manual">
+                      <input
+                        type="radio"
+                        id="transmission_manual"
+                        name="transmission"
+                        value="Manual"
+                        required
+                        checked
+                      />
+                      <span>Manual</span>
+                    </label>
+                    <label class="radio-choice" for="transmission_automatic">
+                      <input
+                        type="radio"
+                        id="transmission_automatic"
+                        name="transmission"
+                        value="Automatic"
+                      />
+                      <span>Automatic</span>
+                    </label>
+                  </fieldset>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="seller_type">
-                  <label for="seller_type">Seller type</label>
-                  <select id="seller_type" name="seller_type">
-                    <option value="">Select Seller type</option>
-                    <option value="Individual">Individual</option>
-                    <option value="Dealer">Dealer</option>
-                    <option value="Trustmark Dealer">Trustmark Dealer</option>
-                  </select>
+                  <fieldset class="radio-group">
+                    <legend>Seller type</legend>
+                    <label class="radio-choice" for="seller_individual">
+                      <input
+                        type="radio"
+                        id="seller_individual"
+                        name="seller_type"
+                        value="Individual"
+                        required
+                      />
+                      <span>Individual</span>
+                    </label>
+                    <label class="radio-choice" for="seller_dealer">
+                      <input
+                        type="radio"
+                        id="seller_dealer"
+                        name="seller_type"
+                        value="Dealer"
+                      />
+                      <span>Dealer</span>
+                    </label>
+                    <label class="radio-choice" for="seller_trustmark">
+                      <input
+                        type="radio"
+                        id="seller_trustmark"
+                        name="seller_type"
+                        value="Trustmark Dealer"
+                      />
+                      <span>Trustmark Dealer</span>
+                    </label>
+                  </fieldset>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="owner">
-                  <label for="owner">Owner</label>
-                  <select id="owner" name="owner">
-                    <option value="">Select Owner type</option>
-                    <option value="First Owner">First Owner</option>
-                    <option value="Second Owner" selected>Second Owner</option>
-                    <option value="Third Owner">Third Owner</option>
-                    <option value="Fourth &amp; Above Owner">
-                      Fourth &amp; Above Owner
-                    </option>
-                  </select>
+                  <fieldset class="radio-group">
+                    <legend>Owner</legend>
+                    <label class="radio-choice" for="owner_first">
+                      <input
+                        type="radio"
+                        id="owner_first"
+                        name="owner"
+                        value="First Owner"
+                        required
+                      />
+                      <span>First Owner</span>
+                    </label>
+                    <label class="radio-choice" for="owner_second">
+                      <input
+                        type="radio"
+                        id="owner_second"
+                        name="owner"
+                        value="Second Owner"
+                        checked
+                      />
+                      <span>Second Owner</span>
+                    </label>
+                    <label class="radio-choice" for="owner_third">
+                      <input
+                        type="radio"
+                        id="owner_third"
+                        name="owner"
+                        value="Third Owner"
+                      />
+                      <span>Third Owner</span>
+                    </label>
+                    <label class="radio-choice" for="owner_fourth">
+                      <input
+                        type="radio"
+                        id="owner_fourth"
+                        name="owner"
+                        value="Fourth &amp; Above Owner"
+                      />
+                      <span>Fourth &amp; Above</span>
+                    </label>
+                  </fieldset>
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="mileage">
@@ -215,17 +320,70 @@
                   <span class="field__error" role="alert"></span>
                 </div>
                 <div class="field" data-field="seats">
-                  <label for="seats">Seats</label>
-                  <input
-                    type="number"
-                    id="seats"
-                    name="seats"
-                    placeholder="Eg.: 4"
-                    min="2"
-                    max="12"
-                    step="1"
-                    required
-                  />
+                  <fieldset class="radio-group radio-group--seats">
+                    <legend>Seats</legend>
+                    <label class="radio-choice" for="seats_2">
+                      <input
+                        type="radio"
+                        id="seats_2"
+                        name="seats"
+                        value="2"
+                        required
+                      />
+                      <span>2</span>
+                    </label>
+                    <label class="radio-choice" for="seats_4">
+                      <input type="radio" id="seats_4" name="seats" value="4" />
+                      <span>4</span>
+                    </label>
+                    <label class="radio-choice" for="seats_5">
+                      <input type="radio" id="seats_5" name="seats" value="5" />
+                      <span>5</span>
+                    </label>
+                    <label class="radio-choice" for="seats_6">
+                      <input type="radio" id="seats_6" name="seats" value="6" />
+                      <span>6</span>
+                    </label>
+                    <label class="radio-choice" for="seats_7">
+                      <input type="radio" id="seats_7" name="seats" value="7" />
+                      <span>7</span>
+                    </label>
+                    <label class="radio-choice" for="seats_8">
+                      <input type="radio" id="seats_8" name="seats" value="8" />
+                      <span>8</span>
+                    </label>
+                    <label class="radio-choice" for="seats_9">
+                      <input type="radio" id="seats_9" name="seats" value="9" />
+                      <span>9</span>
+                    </label>
+                    <label class="radio-choice" for="seats_10">
+                      <input
+                        type="radio"
+                        id="seats_10"
+                        name="seats"
+                        value="10"
+                      />
+                      <span>10</span>
+                    </label>
+                    <label class="radio-choice" for="seats_11">
+                      <input
+                        type="radio"
+                        id="seats_11"
+                        name="seats"
+                        value="11"
+                      />
+                      <span>11</span>
+                    </label>
+                    <label class="radio-choice" for="seats_12">
+                      <input
+                        type="radio"
+                        id="seats_12"
+                        name="seats"
+                        value="12"
+                      />
+                      <span>12</span>
+                    </label>
+                  </fieldset>
                   <span class="field__error" role="alert"></span>
                 </div>
               </div>

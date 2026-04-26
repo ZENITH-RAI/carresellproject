@@ -609,6 +609,65 @@ main {
   letter-spacing: 0.02em;
 }
 
+.radio-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.radio-group legend {
+  width: 100%;
+  margin-bottom: 0.2rem;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.radio-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.radio-choice:hover {
+  border-color: #b8c4d4;
+}
+
+.radio-choice input[type="radio"] {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.radio-choice:has(input[type="radio"]:focus-visible) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.radio-choice:has(input[type="radio"]:checked) {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.radio-group--seats .radio-choice {
+  min-width: 3.4rem;
+  justify-content: center;
+}
+
 .field input,
 .field select {
   font-family: inherit;
@@ -710,6 +769,10 @@ main {
 
 .field--error input,
 .field--error select {
+  border-color: var(--error);
+}
+
+.field--error .radio-choice {
   border-color: var(--error);
 }
 

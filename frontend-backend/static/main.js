@@ -1,25 +1,25 @@
 (function () {
   "use strict";
 
-  // ── Mobile nav toggle ──────────────────────────────────────────────────────
-  var nav_button = document.querySelector(".nav-toggle");
-  var nav_menu = document.querySelector(".nav");
+  // // ── Mobile nav toggle ──────────────────────────────────────────────────────
+  // var nav_button = document.querySelector(".nav-toggle");
+  // var nav_menu = document.querySelector(".nav");
 
-  if (nav_button && nav_menu) {
-    nav_button.addEventListener("click", function () {
-      var is_open = nav_menu.classList.toggle("is-open");
-      nav_button.setAttribute("aria-expanded", is_open ? "true" : "false");
-    });
+  // if (nav_button && nav_menu) {
+  //   nav_button.addEventListener("click", function () {
+  //     var is_open = nav_menu.classList.toggle("is-open");
+  //     nav_button.setAttribute("aria-expanded", is_open ? "true" : "false");
+  //   });
 
-    nav_menu.querySelectorAll("a").forEach(function (link) {
-      link.addEventListener("click", function () {
-        if (window.matchMedia("(max-width: 768px)").matches) {
-          nav_menu.classList.remove("is-open");
-          nav_button.setAttribute("aria-expanded", "false");
-        }
-      });
-    });
-  }
+  //   nav_menu.querySelectorAll("a").forEach(function (link) {
+  //     link.addEventListener("click", function () {
+  //       if (window.matchMedia("(max-width: 768px)").matches) {
+  //         nav_menu.classList.remove("is-open");
+  //         nav_button.setAttribute("aria-expanded", "false");
+  //       }
+  //     });
+  //   });
+  // }
 
   // ── Stop here if there is no estimate form on this page ───────────────────
   var the_form = document.getElementById("estimate-form");
@@ -198,7 +198,7 @@
         if (result_card) result_card.classList.remove("is-loading");
         if (submit_button) submit_button.disabled = false;
         if (price_display) price_display.textContent = "—";
-        show_toast("Could not reach the server. Please try again later.");
+        show_toast("Could not reach the server. Please try again later.s");
       });
   });
 })();
