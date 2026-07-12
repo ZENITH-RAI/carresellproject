@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — AutoValue</title>
+    <meta
+      name="description"
+      content="Log in to AutoValue to keep your prediction history together when the account system is ready."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    {% include "_site_header.html" %}
+
+    <main id="main">
+      <div class="wrap auth-page">
+        <section class="auth-shell auth-shell--single" aria-labelledby="login-title">
+          <div class="auth-panel auth-panel--accent auth-panel--compact">
+            <h1 id="login-title">Log in</h1>
+            <form class="auth-form" action="#" method="post" data-auth-form="login" novalidate>
+              <div class="field" data-field="email">
+                <label for="login-email">Email</label>
+                <input
+                  type="email"
+                  id="login-email"
+                  name="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+                <span class="field__error" role="alert"></span>
+              </div>
+              <div class="field" data-field="password">
+                <label for="login-password">Password</label>
+                <input
+                  type="password"
+                  id="login-password"
+                  name="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  required
+                />
+                <span class="field__error" role="alert"></span>
+              </div>
+              <div class="auth-form__actions">
+                <button type="submit" class="btn btn--primary">Log in</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>
+          &copy;
+          <a href="https://github.com/derAuserwaehlte" target="_blank">
+            Aashish Bista
+          </a>
+          &middot;
+          <a href="https://github.com/BiswasSunar" target="_blank">
+            Bishwash Bishwakarma Paudel
+          </a>
+          &middot;
+
+          <a href="https://github.com/ZENITH-RAI" target="_blank">
+            Zenith Rai
+          </a>
+          &copy;
+        </p>
+        <p>
+          AutoValue — estimates are guides only, not financial or legal advice.
+        </p>
+      </div>
+    </footer>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

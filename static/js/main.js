@@ -20,6 +20,91 @@
     });
   }
 
+  function applyAuthState() {
+    var signedIn = window.localStorage.getItem("autovalueSignedIn") === "true";
+    document.querySelectorAll("[data-guest-link]").forEach(function (link) {
+      link.hidden = signedIn;
+    });
+  }
+
+  applyAuthState();
+
+  var authForm = document.querySelector("[data-auth-form]");
+  var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function clearFormErrors(formEl) {
+    formEl.querySelectorAll(".field--error").forEach(function (field) {
+      field.classList.remove("field--error");
+    });
+    formEl.querySelectorAll(".field__error").forEach(function (errorEl) {
+      errorEl.textContent = "";
+    });
+  }
+
+  function setFormError(formEl, name, message) {
+    var field = formEl.querySelector('[data-field="' + name + '"]');
+    if (!field) return;
+    field.classList.add("field--error");
+    var errorEl = field.querySelector(".field__error");
+    if (errorEl) errorEl.textContent = message;
+  }
+
+  function getAuthField(formEl, name) {
+    return formEl.elements[name] ? formEl.elements[name].value.trim() : "";
+  }
+
+  function validateAuthForm(formEl) {
+    var mode = formEl.dataset.authForm;
+    var ok = true;
+    var email = getAuthField(formEl, "email");
+    var password = getAuthField(formEl, "password");
+
+    clearFormErrors(formEl);
+
+    if (mode === "signup" && !getAuthField(formEl, "name")) {
+      setFormError(formEl, "name", "Enter your full name");
+      ok = false;
+    }
+
+    if (!emailPattern.test(email)) {
+      setFormError(formEl, "email", "Enter a valid email address");
+      ok = false;
+    }
+
+    if (password.length < 6) {
+      setFormError(formEl, "password", "Use at least 6 characters");
+      ok = false;
+    }
+
+    if (mode === "signup") {
+      var confirmPassword = getAuthField(formEl, "confirm_password");
+      if (confirmPassword !== password) {
+        setFormError(formEl, "confirm_password", "Passwords do not match");
+        ok = false;
+      }
+    }
+
+    return ok;
+  }
+
+  if (authForm) {
+    authForm.addEventListener("input", function () {
+      validateAuthForm(authForm);
+    });
+
+    authForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!validateAuthForm(authForm)) return;
+
+      window.localStorage.setItem("autovalueSignedIn", "true");
+      window.localStorage.setItem(
+        "autovalueUserEmail",
+        getAuthField(authForm, "email"),
+      );
+      window.location.href = "/";
+    });
+  }
+
   var form = document.getElementById("estimate-form");
   if (!form) return;
 

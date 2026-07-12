@@ -1,0 +1,129 @@
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="logo" href="{{ url_for('index') }}">
+      <span class="logo_mark" aria-hidden="true">AV</span>
+      AutoValue
+    </a>
+    <button
+      type="button"
+      class="nav-toggle"
+      aria-label="Open menu"
+      aria-expanded="false"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      </svg>
+    </button>
+    <nav class="nav" aria-label="Primary">
+      <div class="nav__primary">
+        <a
+          href="{{ url_for('index') }}"
+          {%
+          if
+          active_page=""
+          ="home"
+          %}aria-current="page"
+          {%
+          endif
+          %}
+          >Home</a
+        >
+        <a
+          href="{{ url_for('estimate') }}"
+          {%
+          if
+          active_page=""
+          ="estimate"
+          %}aria-current="page"
+          {%
+          endif
+          %}
+          >Estimator</a
+        >
+        <a
+          href="{{ url_for('about') }}"
+          {%
+          if
+          active_page=""
+          ="about"
+          %}aria-current="page"
+          {%
+          endif
+          %}
+          >About</a
+        >
+      </div>
+      <div class="nav__auth">
+        <a
+          class="nav__auth-link"
+          href="{{ url_for('login') }}"
+          data-guest-link
+          {%
+          if
+          active_page=""
+          ="login"
+          %}aria-current="page"
+          {%
+          endif
+          %}
+          >Login</a
+        >
+        <a
+          class="nav__auth-link nav__auth-link--accent"
+          href="{{ url_for('signup') }}"
+          data-guest-link
+          {%
+          if
+          active_page=""
+          ="signup"
+          %}aria-current="page"
+          {%
+          endif
+          %}
+          >SignUp</a
+        >
+        <a
+          class="nav__profile"
+          href="{{ url_for('profile') }}"
+          data-profile-link
+          title="Profile and estimate history"
+          aria-label="Profile and estimate history"
+          {%
+          if
+          active_page=""
+          ="profile"
+          %}aria-current="page"
+          {%
+          endif
+          %}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"
+            />
+          </svg>
+        </a>
+      </div>
+    </nav>
+  </div>
+</header>

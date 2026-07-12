@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SignUp — AutoValue</title>
+    <meta
+      name="description"
+      content="Create an AutoValue account so your prediction history can be stored later when backend support is added."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    {% include "_site_header.html" %}
+
+    <main id="main">
+      <div class="wrap auth-page">
+        <section class="auth-shell" aria-labelledby="signup-title">
+          <div class="auth-panel auth-panel--accent">
+            <p class="auth-kicker">Create account</p>
+            <h1 id="signup-title">Create your profile.</h1>
+
+            <form class="auth-form" action="#" method="post" data-auth-form="signup" novalidate>
+              <div class="field" data-field="name">
+                <label for="signup-name">Full name</label>
+                <input
+                  type="text"
+                  id="signup-name"
+                  name="name"
+                  placeholder="Your name"
+                  autocomplete="name"
+                  required
+                />
+                <span class="field__error" role="alert"></span>
+              </div>
+              <div class="field" data-field="email">
+                <label for="signup-email">Email</label>
+                <input
+                  type="email"
+                  id="signup-email"
+                  name="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  required
+                />
+                <span class="field__error" role="alert"></span>
+              </div>
+              <div class="field" data-field="password">
+                <label for="signup-password">Password</label>
+                <input
+                  type="password"
+                  id="signup-password"
+                  name="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
+                  required
+                />
+                <span class="field__error" role="alert"></span>
+              </div>
+              <div class="field" data-field="confirm_password">
+                <label for="signup-confirm">Confirm password</label>
+                <input
+                  type="password"
+                  id="signup-confirm"
+                  name="confirm_password"
+                  placeholder="Repeat your password"
+                  autocomplete="new-password"
+                  required
+                />
+                <span class="field__error" role="alert"></span>
+              </div>
+              <div class="auth-form__actions">
+                <button type="submit" class="btn btn--primary">Sign up</button>
+                <a
+                  class="btn btn--ghost auth-form__guest"
+                  href="{{ url_for('estimate') }}"
+                  >Use guest estimate</a
+                >
+              </div>
+            </form>
+          </div>
+
+          <aside class="auth-panel">
+            <h2>Account perks</h2>
+            <ul class="auth-short-list">
+              <li>Saved estimate history</li>
+              <li>Quick access from profile</li>
+              <li>Ready for backend login later</li>
+            </ul>
+          </aside>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>
+          &copy;
+          <a href="https://github.com/derAuserwaehlte" target="_blank">
+            Aashish Bista
+          </a>
+          &middot;
+          <a href="https://github.com/BiswasSunar" target="_blank">
+            Bishwash Bishwakarma Paudel
+          </a>
+          &middot;
+
+          <a href="https://github.com/ZENITH-RAI" target="_blank">
+            Zenith Rai
+          </a>
+          &copy;
+        </p>
+        <p>
+          AutoValue — estimates are guides only, not financial or legal advice.
+        </p>
+      </div>
+    </footer>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

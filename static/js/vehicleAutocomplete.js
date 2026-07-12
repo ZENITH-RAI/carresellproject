@@ -49,6 +49,18 @@
     });
   }
 
+  function filterPrefix(items, query) {
+    var q = normalize(query);
+    if (!q) return items.slice();
+    return items
+      .filter(function (item) {
+        return normalize(item).startsWith(q);
+      })
+      .sort(function (a, b) {
+        return a.localeCompare(b);
+      });
+  }
+
   function loadCatalog() {
     return fetch(CATALOG_URL)
       .then(function (r) {
@@ -217,8 +229,7 @@
       getItems: function (q) {
         if (!catalog) return [];
         var brands = getBrandList();
-        if (!normalize(q)) return brands;
-        return filterAndSort(brands, q);
+        return filterPrefix(brands, q);
       },
     });
 
@@ -266,7 +277,7 @@
       .catch(function () {
         setStatus(
           catalogStatus,
-          "Could not load suggestions. Use a local web server (e.g. python -m http.server) from the frontend folder, or ask your team to rebuild the vehicle list.",
+          "Could not load suggestions. Run the Flask app from the project folder, or rebuild static/data/vehicle_catalog.json.",
           true,
         );
       });

@@ -1,5 +1,5 @@
 """
-Build frontend/data/vehicle_catalog.json from UsedCars.csv.
+Build static/data/vehicle_catalog.json from UsedCars.csv.
 Brand = first token of `name`; model = remainder (same split as app.py).
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ import pandas as pd
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 CSV_PATH = os.path.join(ROOT, "UsedCars.csv")
-OUT_PATH = os.path.join(ROOT, "frontend", "data", "vehicle_catalog.json")
+OUT_PATH = os.path.join(ROOT, "static", "data", "vehicle_catalog.json")
 
 
 def main() -> None:

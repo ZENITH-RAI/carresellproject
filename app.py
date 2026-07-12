@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from flask import Flask, render_template, request
 
 app = Flask(__name__, template_folder="templates")
+BASE_DIR = Path(__file__).resolve().parent
 
 # ---------------------------------------------------------
 # GLOBAL VARIABLES FOR MODEL AND METRICS
@@ -109,7 +111,7 @@ def initialize_and_train():
     print("Loading data and training model... This may take a moment.")
     
     np.random.seed(42)
-    df = pd.read_csv("UsedCars.csv")
+    df = pd.read_csv(BASE_DIR / "UsedCars.csv")
     df['selling_price'] = df['selling_price'] * 2.2
     df = df.drop(columns=['torque'], errors='ignore')
     df = df.drop_duplicates()
@@ -163,20 +165,40 @@ def initialize_and_train():
 # Run training before requests
 initialize_and_train()
 
+
+def render_page(template_name, active_page, **context):
+    context["active_page"] = active_page
+    return render_template(template_name, **context)
+
 # ---------------------------------------------------------
 # FLASK ROUTES
 # ---------------------------------------------------------
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('index.html', metrics=model_metrics, price=None)
+    return render_page('index.html', 'home', metrics=model_metrics, price=None)
 
 @app.route('/about')
 def about():
-    return render_template('about.html')
+    return render_page('about.html', 'about')
 
 @app.route('/estimate')
 def estimate():
-    return render_template('estimate.html', metrics=model_metrics, price=None, error=None, form_data={})
+    return render_page('estimate.html', 'estimate', metrics=model_metrics, price=None, error=None, form_data={})
+
+
+@app.route('/login')
+def login():
+    return render_page('login.html', 'login')
+
+
+@app.route('/signup')
+def signup():
+    return render_page('signup.html', 'signup')
+
+
+@app.route('/profile')
+def profile():
+    return render_page('profile.html', 'profile')
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -209,6 +231,7 @@ def predict():
         
         return render_template(
             'estimate.html',
+            active_page='estimate',
             metrics=model_metrics,
             price=formatted_price,
             error=None,
@@ -218,6 +241,7 @@ def predict():
     except Exception as e:
         return render_template(
             'estimate.html',
+            active_page='estimate',
             metrics=model_metrics,
             price=None,
             error=str(e),
