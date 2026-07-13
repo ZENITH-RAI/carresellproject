@@ -29,6 +29,15 @@
 
   applyAuthState();
 
+  var logoutButton = document.querySelector("[data-logout]");
+  if (logoutButton) {
+    logoutButton.addEventListener("click", function () {
+      window.localStorage.removeItem("autovalueSignedIn");
+      window.localStorage.removeItem("autovalueUserEmail");
+      window.location.href = "/";
+    });
+  }
+
   var authForm = document.querySelector("[data-auth-form]");
   var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

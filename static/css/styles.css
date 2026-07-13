@@ -190,14 +190,14 @@ main {
   border: 1px solid transparent;
 }
 
-.nav__auth-link--accent {
+.nav .nav__auth-link--accent {
   color: #fff;
   background: var(--accent);
   box-shadow: 0 4px 14px rgba(26, 86, 176, 0.18);
 }
 
-.nav__auth-link--accent:hover,
-.nav__auth-link--accent[aria-current="page"] {
+.nav .nav__auth-link--accent:hover,
+.nav .nav__auth-link--accent[aria-current="page"] {
   color: #fff;
   background: var(--accent-hover);
 }
@@ -821,6 +821,12 @@ main {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+.profile-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .history-panel h2 {
