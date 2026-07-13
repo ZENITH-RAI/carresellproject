@@ -25,6 +25,9 @@
     document.querySelectorAll("[data-guest-link]").forEach(function (link) {
       link.hidden = signedIn;
     });
+    document.querySelectorAll("[data-signed-in-only]").forEach(function (element) {
+      element.hidden = !signedIn;
+    });
   }
 
   applyAuthState();
