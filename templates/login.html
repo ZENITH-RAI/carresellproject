@@ -6,7 +6,7 @@
     <title>Login — AutoValue</title>
     <meta
       name="description"
-      content="Log in to AutoValue to keep your prediction history together when the account system is ready."
+      content="Log in to AutoValue to view your profile and estimate history."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,13 +28,18 @@
         <section class="auth-shell auth-shell--single" aria-labelledby="login-title">
           <div class="auth-panel auth-panel--accent auth-panel--compact">
             <h1 id="login-title">Log in</h1>
-            <form class="auth-form" action="#" method="post" data-auth-form="login" novalidate>
+            <form class="auth-form" action="{{ url_for('login', next=next_url) }}" method="post" data-auth-form="login" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              {% if error %}
+              <p class="form-message form-message--error" role="alert">{{ error }}</p>
+              {% endif %}
               <div class="field" data-field="email">
                 <label for="login-email">Email</label>
                 <input
                   type="email"
                   id="login-email"
                   name="email"
+                  value="{{ form_data.get('email', '') }}"
                   placeholder="you@example.com"
                   autocomplete="email"
                   required

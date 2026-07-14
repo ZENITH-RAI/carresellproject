@@ -20,27 +20,6 @@
     });
   }
 
-  function applyAuthState() {
-    var signedIn = window.localStorage.getItem("autovalueSignedIn") === "true";
-    document.querySelectorAll("[data-guest-link]").forEach(function (link) {
-      link.hidden = signedIn;
-    });
-    document.querySelectorAll("[data-signed-in-only]").forEach(function (element) {
-      element.hidden = !signedIn;
-    });
-  }
-
-  applyAuthState();
-
-  var logoutButton = document.querySelector("[data-logout]");
-  if (logoutButton) {
-    logoutButton.addEventListener("click", function () {
-      window.localStorage.removeItem("autovalueSignedIn");
-      window.localStorage.removeItem("autovalueUserEmail");
-      window.location.href = "/";
-    });
-  }
-
   var authForm = document.querySelector("[data-auth-form]");
   var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -83,8 +62,8 @@
       ok = false;
     }
 
-    if (password.length < 6) {
-      setFormError(formEl, "password", "Use at least 6 characters");
+    if (password.length < 8) {
+      setFormError(formEl, "password", "Use at least 8 characters");
       ok = false;
     }
 
@@ -105,15 +84,7 @@
     });
 
     authForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (!validateAuthForm(authForm)) return;
-
-      window.localStorage.setItem("autovalueSignedIn", "true");
-      window.localStorage.setItem(
-        "autovalueUserEmail",
-        getAuthField(authForm, "email"),
-      );
-      window.location.href = "/";
+      if (!validateAuthForm(authForm)) e.preventDefault();
     });
   }
 

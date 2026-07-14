@@ -1,9 +1,66 @@
 import pandas as pd
 import numpy as np
+import hmac
+import os
+import secrets
 from pathlib import Path
-from flask import Flask, render_template, request
+from urllib.parse import urlsplit
+from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+db = SQLAlchemy()
 
 app = Flask(__name__, template_folder="templates")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-development-secret")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL", "postgresql://postgres:Messi.100@localhost:5432/carresell_db"
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+db.init_app(app)
+
+migrate = Migrate(app, db)
+
+from models import User, Estimate
+
+login_manager = LoginManager()
+login_manager.login_view = "login"
+login_manager.login_message = "Please log in to view your profile."
+login_manager.login_message_category = "error"
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))
+
+
+def csrf_token():
+    if "_csrf_token" not in session:
+        session["_csrf_token"] = secrets.token_urlsafe(32)
+    return session["_csrf_token"]
+
+
+def csrf_is_valid():
+    expected = session.get("_csrf_token", "")
+    supplied = request.form.get("csrf_token", "")
+    return bool(expected and supplied and hmac.compare_digest(expected, supplied))
+
+
+def safe_next_url(next_url):
+    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+    return url_for("profile")
+
+
+app.jinja_env.globals["csrf_token"] = csrf_token
+
 BASE_DIR = Path(__file__).resolve().parent
 
 # ---------------------------------------------------------
@@ -186,25 +243,138 @@ def estimate():
     return render_page('estimate.html', 'estimate', metrics=model_metrics, price=None, error=None, form_data={})
 
 
-@app.route('/login')
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_page('login.html', 'login')
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
+
+    next_url = request.args.get('next', '')
+    form_data = {'email': ''}
+
+    if request.method == 'POST':
+        form_data['email'] = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+
+        if not csrf_is_valid():
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='Your form expired. Please try again.'
+            ), 400
+        if not form_data['email'] or not password:
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='Email and password are required.'
+            ), 400
+
+        try:
+            user = User.query.filter(func.lower(User.email) == form_data['email']).first()
+        except SQLAlchemyError:
+            db.session.rollback()
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='We could not reach your account. Please try again.'
+            ), 503
+
+        try:
+            valid_credentials = user is not None and user.check_password(password)
+        except (TypeError, ValueError):
+            valid_credentials = False
+
+        if not valid_credentials:
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='Invalid email or password.'
+            ), 401
+
+        login_user(user)
+        flash('Welcome back, {}.'.format(user.name), 'success')
+        return redirect(safe_next_url(next_url))
+
+    return render_page('login.html', 'login', form_data=form_data, next_url=next_url, error=None)
 
 
-@app.route('/signup')
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    return render_page('signup.html', 'signup')
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
+
+    form_data = {'name': '', 'email': ''}
+    if request.method == 'POST':
+        form_data['name'] = request.form.get('name', '').strip()
+        form_data['email'] = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not csrf_is_valid():
+            return render_page('signup.html', 'signup', form_data=form_data, error='Your form expired. Please try again.'), 400
+        if not form_data['name'] or not form_data['email'] or not password or not confirm_password:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Complete all required fields.'), 400
+        if len(form_data['name']) > 100:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Name must be 100 characters or fewer.'), 400
+        if len(form_data['email']) > 100 or '@' not in form_data['email']:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Enter a valid email address.'), 400
+        if len(password) < 8:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Password must be at least 8 characters.'), 400
+        if password != confirm_password:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Passwords do not match.'), 400
+
+        try:
+            existing_user = User.query.filter(func.lower(User.email) == form_data['email']).first()
+            if existing_user:
+                return render_page('signup.html', 'signup', form_data=form_data, error='An account with that email already exists.'), 409
+
+            user = User(name=form_data['name'], email=form_data['email'])
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return render_page('signup.html', 'signup', form_data=form_data, error='An account with that email already exists.'), 409
+        except SQLAlchemyError:
+            db.session.rollback()
+            return render_page('signup.html', 'signup', form_data=form_data, error='We could not create your account. Please try again.'), 503
+
+        login_user(user)
+        flash('Your account has been created. Welcome to AutoValue.', 'success')
+        return redirect(url_for('index'))
+
+    return render_page('signup.html', 'signup', form_data=form_data, error=None)
 
 
 @app.route('/profile')
+@login_required
 def profile():
-    return render_page('profile.html', 'profile')
+    try:
+        estimates = current_user.estimates.order_by(Estimate.created_at.desc()).all()
+    except SQLAlchemyError:
+        db.session.rollback()
+        estimates = []
+        flash('We could not load your estimate history. Please try again.', 'error')
+    return render_page('profile.html', 'profile', estimates=estimates)
+
+
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    if not csrf_is_valid():
+        flash('Your form expired. Please try again.', 'error')
+        return redirect(url_for('profile'))
+    logout_user()
+    session.pop('_csrf_token', None)
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/predict', methods=['POST'])
 def predict():
     # Extract form data and convert types safely
+    form_data = request.form.to_dict(flat=True)
+    if not csrf_is_valid():
+        return render_page(
+            'estimate.html', 'estimate', metrics=model_metrics, price=None,
+            error='Your form expired. Please submit the estimate again.', form_data=form_data
+        ), 400
+
     try:
-        form_data = request.form.to_dict(flat=True)
         user_input = {
             'year': int(form_data['year']),
             'km_driven': float(form_data['km_driven']),
@@ -228,24 +398,36 @@ def predict():
         
         # Format the price nicely
         formatted_price = f"NPR {int(price):,}"
+
+        save_error = None
+        if current_user.is_authenticated:
+            try:
+                estimate_record = Estimate(
+                    user_id=current_user.id,
+                    brand=user_input['brand'],
+                    model=user_input['model'],
+                    year=user_input['year'],
+                    fuel=user_input['fuel'],
+                    transmission=user_input['transmission'],
+                    predicted_price=price,
+                )
+                db.session.add(estimate_record)
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                save_error = 'Your estimate was generated, but it could not be saved to history.'
         
-        return render_template(
-            'estimate.html',
-            active_page='estimate',
-            metrics=model_metrics,
-            price=formatted_price,
-            error=None,
-            form_data=form_data
+        return render_page(
+            'estimate.html', 'estimate', metrics=model_metrics, price=formatted_price,
+            error=None, save_error=save_error, form_data=form_data,
+            estimate_saved=current_user.is_authenticated and save_error is None
         )
     
     except Exception as e:
-        return render_template(
-            'estimate.html',
-            active_page='estimate',
-            metrics=model_metrics,
-            price=None,
-            error=str(e),
-            form_data=request.form.to_dict(flat=True)
+        return render_page(
+            'estimate.html', 'estimate', metrics=model_metrics, price=None,
+            error='Could not generate an estimate from those details. Please check the fields and try again.',
+            form_data=form_data
         )
 
 if __name__ == '__main__':

@@ -26,24 +26,45 @@
     <main id="main">
       <div class="wrap section section--tight">
         <header class="page-head">
-          <h1>Profile</h1>
-          <p>Your estimate history will appear here after login storage is connected.</p>
+          <h1>{{ current_user.name }}</h1>
+          <p>{{ current_user.email }} &middot; Member since {{ current_user.created_at.strftime('%B %Y') }}</p>
         </header>
 
         <section class="history-panel" aria-labelledby="history-title">
           <div>
             <h2 id="history-title">Estimate history</h2>
-            <p>No saved estimates yet.</p>
+            <p>{{ estimates|length }} saved estimate{{ '' if estimates|length == 1 else 's' }}</p>
           </div>
           <a class="btn btn--primary" href="{{ url_for('estimate') }}">
             New estimate
           </a>
         </section>
-        <div class="profile-actions" data-signed-in-only hidden>
-          <button class="btn btn--ghost" type="button" data-logout>
+        {% if estimates %}
+        <section class="history-list" aria-label="Saved estimates">
+          {% for estimate in estimates %}
+          <article class="history-item">
+            <div>
+              <h3>{{ estimate.brand }} {{ estimate.model }}</h3>
+              <p>{{ estimate.year }} &middot; {{ estimate.fuel }} &middot; {{ estimate.transmission }}</p>
+            </div>
+            <div class="history-item__value">
+              <strong>NPR {{ '{:,.0f}'.format(estimate.predicted_price) }}</strong>
+              <time datetime="{{ estimate.created_at.isoformat() }}">{{ estimate.created_at.strftime('%d %b %Y') }}</time>
+            </div>
+          </article>
+          {% endfor %}
+        </section>
+        {% else %}
+        <section class="history-empty" aria-label="Saved estimates">
+          <p>You have not saved any estimates yet.</p>
+        </section>
+        {% endif %}
+        <form class="profile-actions" action="{{ url_for('logout') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button class="btn btn--ghost" type="submit">
             Log out
           </button>
-        </div>
+        </form>
       </div>
     </main>
 

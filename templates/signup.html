@@ -6,7 +6,7 @@
     <title>SignUp — AutoValue</title>
     <meta
       name="description"
-      content="Create an AutoValue account so your prediction history can be stored later when backend support is added."
+      content="Create an AutoValue account to save and review your estimate history."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,13 +30,18 @@
             <p class="auth-kicker">Create account</p>
             <h1 id="signup-title">Create your profile.</h1>
 
-            <form class="auth-form" action="#" method="post" data-auth-form="signup" novalidate>
+            <form class="auth-form" action="{{ url_for('signup') }}" method="post" data-auth-form="signup" novalidate>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              {% if error %}
+              <p class="form-message form-message--error" role="alert">{{ error }}</p>
+              {% endif %}
               <div class="field" data-field="name">
                 <label for="signup-name">Full name</label>
                 <input
                   type="text"
                   id="signup-name"
                   name="name"
+                  value="{{ form_data.get('name', '') }}"
                   placeholder="Your name"
                   autocomplete="name"
                   required
@@ -49,6 +54,7 @@
                   type="email"
                   id="signup-email"
                   name="email"
+                  value="{{ form_data.get('email', '') }}"
                   placeholder="you@example.com"
                   autocomplete="email"
                   required
@@ -95,7 +101,7 @@
             <ul class="auth-short-list">
               <li>Saved estimate history</li>
               <li>Quick access from profile</li>
-              <li>Ready for backend login later</li>
+              <li>Secure password storage</li>
             </ul>
           </aside>
         </section>

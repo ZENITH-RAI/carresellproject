@@ -43,6 +43,7 @@
               method="post"
               novalidate
             >
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
               <div class="form-grid">
                 <div class="field" data-field="brand">
                   <label for="brand">Brand</label>
@@ -249,6 +250,10 @@
               <p class="result-card__note">
                 {% if error %}
                 Could not generate estimate: {{ error }}
+                {% elif save_error %}
+                {{ save_error }}
+                {% elif estimate_saved %}
+                Prediction generated and saved to your estimate history.
                 {% elif price %}
                 Prediction generated from your submitted vehicle details.
                 {% else %}
