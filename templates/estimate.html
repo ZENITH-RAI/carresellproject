@@ -270,6 +270,64 @@
         </div>
       </div>
     </main>
+{% if price %}
+<div class="results-section mt-5">
+    <h3 class="mb-4">Prediction Results</h3>
+    
+    <div class="row text-center mb-5">
+        <div class="col-md-4">
+            <div class="card bg-light shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Minimum Estimated</h5>
+                    <h3 class="card-text text-secondary">{{ min_price }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Predicted Price</h5>
+                    <h2 class="card-text font-weight-bold">{{ price }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title text-muted">Maximum Estimated</h5>
+                    <h3 class="card-text text-secondary">{{ max_price }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mb-3">Similar Cars from Market</h4>
+    {% if similar_cars %}
+    <div class="row">
+        {% for car in similar_cars %}
+        <div class="col-md-4 mb-3">
+            <div class="card h-100 shadow-sm border-info">
+                <div class="card-header bg-transparent border-info">
+                    <strong>{{ car.name }}</strong> ({{ car.year }})
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>Fuel:</strong> {{ car.fuel }}</li>
+                    <li class="list-group-item"><strong>Trans:</strong> {{ car.transmission }}</li>
+                    <li class="list-group-item"><strong>Mileage:</strong> {{ car.mileage }} kmpl</li>
+                    <li class="list-group-item bg-light">
+                        <strong>Actual Price:</strong> {{ car.actual_price }}<br>
+                        <small class="text-muted">Difference: {{ car.diff }}</small>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        {% endendfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">No highly similar cars found in the current dataset.</div>
+    {% endif %}
+</div>
+{% endif %}
 
     <footer class="site-footer">
       <div class="wrap">
