@@ -18,6 +18,27 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
+    
+    <style>
+      .results-section { margin-top: 4rem; margin-bottom: 2rem; border-top: 1px solid #eaeaea; padding-top: 2rem; }
+      .results-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 3rem; margin-top: 1.5rem; }
+      .results-col { flex: 1 1 calc(33.333% - 1.5rem); min-width: 250px; }
+      
+      .price-card { background: #f9fafb; border-radius: 8px; padding: 1.5rem; text-align: center; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+      .price-card.primary { background: #0056b3; border-color: #004494; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+      .price-card-title { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; color: #6b7280; }
+      .price-card.primary .price-card-title { color: #93c5fd; }
+      .price-card-value { font-size: 1.5rem; font-weight: 700; margin: 0; color: #111827; }
+      .price-card.primary .price-card-value { color: #ffffff; font-size: 1.75rem; }
+      
+      .similar-car-card { border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; background: #ffffff; height: 100%; display: flex; flex-direction: column; }
+      .similar-car-header { background: #f3f4f6; padding: 1rem; border-bottom: 1px solid #d1d5db; font-weight: 600; color: #111827; }
+      .similar-car-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; display: flex; flex-direction: column; }
+      .similar-car-list li { padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; }
+      .similar-car-list li:last-child { border-bottom: none; background: #f8fafc; margin-top: auto; border-top: 1px solid #e2e8f0; }
+      
+      .alert-info { background: #eff6ff; color: #1e3a8a; padding: 1rem; border-radius: 6px; border: 1px solid #bfdbfe; }
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -27,16 +48,12 @@
       <div class="wrap">
         <header class="page-head">
           <h1>Price estimator</h1>
-          <!-- <p>Complete the form below.</p> -->
         </header>
 
         <div class="estimator">
           <div class="form-panel">
             <h2>Vehicle details</h2>
             <p class="form-panel__hint">* All fields below are required.</p>
-            <!-- <p id="catalog-status" class="catalog-status" aria-live="polite">
-              Loading vehicle names…
-            </p> -->
             <form
               id="estimate-form"
               action="{{ url_for('predict') }}"
@@ -261,90 +278,72 @@
                 {% endif %}
               </p>
             </div>
-            <!-- <div class="api-hint">
-              <strong>Note:</strong> If you do not see a price after submitting,
-              the live calculation may still be connected by your team. See
-              <a href="{{ url_for('about') }}">About</a> for project details.
-            </div> -->
           </aside>
         </div>
+        
+        {% if price %}
+        <div class="results-section">
+            <h3>Prediction Results</h3>
+            
+            <div class="results-grid">
+                <div class="results-col">
+                    <div class="price-card">
+                        <h5 class="price-card-title">Minimum Estimated</h5>
+                        <p class="price-card-value">{{ min_price }}</p>
+                    </div>
+                </div>
+                <div class="results-col">
+                    <div class="price-card primary">
+                        <h5 class="price-card-title">Predicted Price</h5>
+                        <p class="price-card-value">{{ price }}</p>
+                    </div>
+                </div>
+                <div class="results-col">
+                    <div class="price-card">
+                        <h5 class="price-card-title">Maximum Estimated</h5>
+                        <p class="price-card-value">{{ max_price }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <h4>Similar Cars from Market</h4>
+            {% if similar_cars %}
+            <div class="results-grid">
+                {% for car in similar_cars %}
+                <div class="results-col">
+                    <div class="similar-car-card">
+                        <div class="similar-car-header">
+                            {{ car.name }} ({{ car.year }})
+                        </div>
+                        <ul class="similar-car-list">
+                            <li><strong>Fuel:</strong> {{ car.fuel }}</li>
+                            <li><strong>Trans:</strong> {{ car.transmission }}</li>
+                            <li><strong>Mileage:</strong> {{ car.mileage }} kmpl</li>
+                            <li>
+                                <strong>Actual Price:</strong> {{ car.actual_price }}<br>
+                                <span style="color: #6b7280; font-size: 0.85rem;">Difference: {{ car.diff }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert-info">No highly similar cars found in the current dataset.</div>
+            {% endif %}
+        </div>
+        {% endif %}
+
       </div>
     </main>
-{% if price %}
-<div class="results-section mt-5">
-    <h3 class="mb-4">Prediction Results</h3>
-    
-    <div class="row text-center mb-5">
-        <div class="col-md-4">
-            <div class="card bg-light shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title text-muted">Minimum Estimated</h5>
-                    <h3 class="card-text text-secondary">{{ min_price }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-primary text-white shadow">
-                <div class="card-body">
-                    <h5 class="card-title">Predicted Price</h5>
-                    <h2 class="card-text font-weight-bold">{{ price }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-light shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title text-muted">Maximum Estimated</h5>
-                    <h3 class="card-text text-secondary">{{ max_price }}</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <h4 class="mb-3">Similar Cars from Market</h4>
-    {% if similar_cars %}
-    <div class="row">
-        {% for car in similar_cars %}
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 shadow-sm border-info">
-                <div class="card-header bg-transparent border-info">
-                    <strong>{{ car.name }}</strong> ({{ car.year }})
-                </div>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><strong>Fuel:</strong> {{ car.fuel }}</li>
-                    <li class="list-group-item"><strong>Trans:</strong> {{ car.transmission }}</li>
-                    <li class="list-group-item"><strong>Mileage:</strong> {{ car.mileage }} kmpl</li>
-                    <li class="list-group-item bg-light">
-                        <strong>Actual Price:</strong> {{ car.actual_price }}<br>
-                        <small class="text-muted">Difference: {{ car.diff }}</small>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        {% endendfor %}
-    </div>
-    {% else %}
-    <div class="alert alert-info">No highly similar cars found in the current dataset.</div>
-    {% endif %}
-</div>
-{% endif %}
 
     <footer class="site-footer">
       <div class="wrap">
         <p>
           &copy;
-          <a href="https://github.com/derAuserwaehlte" target="_blank">
-            Aashish Bista
-          </a>
-          &middot;
-          <a href="https://github.com/BiswasSunar" target="_blank">
-            Bishwash Bishwakarma Paudel
-          </a>
-          &middot;
-
-          <a href="https://github.com/ZENITH-RAI" target="_blank">
-            Zenith Rai
-          </a>
+          <a href="https://github.com/derAuserwaehlte" target="_blank">Aashish Bista</a> &middot;
+          <a href="https://github.com/BiswasSunar" target="_blank">Bishwash Bishwakarma Paudel</a> &middot;
+          <a href="https://github.com/ZENITH-RAI" target="_blank">Zenith Rai</a>
           &copy;
         </p>
         <p>
