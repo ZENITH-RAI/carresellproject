@@ -357,9 +357,126 @@ def export_csv():
 def estimate():
     return render_page('estimate.html', 'estimate', metrics=model_metrics, price=None, error=None, form_data={})
 
-# --- KEEP YOUR EXISTING /login, /signup, /profile, /logout ROUTES EXACTLY AS THEY WERE ---
-# (I am omitting them here for brevity, but they require no modifications for these features to work)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
 
+    next_url = request.args.get('next', '')
+    form_data = {'email': ''}
+
+    if request.method == 'POST':
+        form_data['email'] = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+
+        if not csrf_is_valid():
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='Your form expired. Please try again.'
+            ), 400
+        if not form_data['email'] or not password:
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='Email and password are required.'
+            ), 400
+
+        try:
+            user = User.query.filter(func.lower(User.email) == form_data['email']).first()
+        except SQLAlchemyError:
+            db.session.rollback()
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='We could not reach your account. Please try again.'
+            ), 503
+
+        try:
+            valid_credentials = user is not None and user.check_password(password)
+        except (TypeError, ValueError):
+            valid_credentials = False
+
+        if not valid_credentials:
+            return render_page(
+                'login.html', 'login', form_data=form_data, next_url=next_url,
+                error='Invalid email or password.'
+            ), 401
+
+        login_user(user)
+        flash('Welcome back, {}.'.format(user.name), 'success')
+        return redirect(safe_next_url(next_url))
+
+    return render_page('login.html', 'login', form_data=form_data, next_url=next_url, error=None)
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
+
+    form_data = {'name': '', 'email': ''}
+    if request.method == 'POST':
+        form_data['name'] = request.form.get('name', '').strip()
+        form_data['email'] = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not csrf_is_valid():
+            return render_page('signup.html', 'signup', form_data=form_data, error='Your form expired. Please try again.'), 400
+        if not form_data['name'] or not form_data['email'] or not password or not confirm_password:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Complete all required fields.'), 400
+        if len(form_data['name']) > 100:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Name must be 100 characters or fewer.'), 400
+        if len(form_data['email']) > 100 or '@' not in form_data['email']:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Enter a valid email address.'), 400
+        if len(password) < 8:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Password must be at least 8 characters.'), 400
+        if password != confirm_password:
+            return render_page('signup.html', 'signup', form_data=form_data, error='Passwords do not match.'), 400
+
+        try:
+            existing_user = User.query.filter(func.lower(User.email) == form_data['email']).first()
+            if existing_user:
+                return render_page('signup.html', 'signup', form_data=form_data, error='An account with that email already exists.'), 409
+
+            user = User(name=form_data['name'], email=form_data['email'])
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return render_page('signup.html', 'signup', form_data=form_data, error='An account with that email already exists.'), 409
+        except SQLAlchemyError:
+            db.session.rollback()
+            return render_page('signup.html', 'signup', form_data=form_data, error='We could not create your account. Please try again.'), 503
+
+        login_user(user)
+        flash('Your account has been created. Welcome to AutoValue.', 'success')
+        return redirect(url_for('index'))
+
+    return render_page('signup.html', 'signup', form_data=form_data, error=None)
+
+
+@app.route('/profile')
+@login_required
+def profile():
+    try:
+        estimates = current_user.estimates.order_by(Estimate.created_at.desc()).all()
+    except SQLAlchemyError:
+        db.session.rollback()
+        estimates = []
+        flash('We could not load your estimate history. Please try again.', 'error')
+    return render_page('profile.html', 'profile', estimates=estimates)
+
+
+@app.route('/logout', methods=['POST'])
+@login_required
+def logout():
+    if not csrf_is_valid():
+        flash('Your form expired. Please try again.', 'error')
+        return redirect(url_for('profile'))
+    logout_user()
+    session.pop('_csrf_token', None)
+    flash('You have been logged out.', 'success')
+    return redirect(url_for('index'))
 @app.route('/predict', methods=['POST'])
 def predict():
     form_data = request.form.to_dict(flat=True)
