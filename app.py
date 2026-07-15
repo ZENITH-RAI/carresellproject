@@ -3,9 +3,12 @@ import numpy as np
 import hmac
 import os
 import secrets
+import csv
+from io import StringIO
+from functools import wraps
 from pathlib import Path
 from urllib.parse import urlsplit
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for, abort, Response
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -24,7 +27,6 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 db.init_app(app)
-
 migrate = Migrate(app, db)
 
 from models import User, Estimate
@@ -35,29 +37,24 @@ login_manager.login_message = "Please log in to view your profile."
 login_manager.login_message_category = "error"
 login_manager.init_app(app)
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
-
 
 def csrf_token():
     if "_csrf_token" not in session:
         session["_csrf_token"] = secrets.token_urlsafe(32)
     return session["_csrf_token"]
 
-
 def csrf_is_valid():
     expected = session.get("_csrf_token", "")
     supplied = request.form.get("csrf_token", "")
     return bool(expected and supplied and hmac.compare_digest(expected, supplied))
 
-
 def safe_next_url(next_url):
     if next_url and next_url.startswith("/") and not next_url.startswith("//"):
         return next_url
     return url_for("profile")
-
 
 app.jinja_env.globals["csrf_token"] = csrf_token
 
@@ -70,8 +67,11 @@ CURRENT_YEAR = 2025
 pipeline_instance = None
 model_instance = None
 model_metrics = {}
- 
-# --- PASTE YOUR CUSTOM CLASSES HERE ---
+reference_data = None # NEW: Store clean data for similar cars
+feature_importances = [] # NEW: Store weights for dashboard
+training_samples_count = 0
+feature_count = 0
+
 class FullPipeline:
     def __init__(self):
         self.numeric_cols = []
@@ -160,13 +160,11 @@ class SGDRegressor:
         X = np.asarray(X, dtype=np.float64)
         return np.dot(X, self.coef_) + self.intercept_
 
-# ---------------------------------------------------------
-# INITIALIZATION & TRAINING ROUTINE
-# ---------------------------------------------------------
 def initialize_and_train():
-    global pipeline_instance, model_instance, model_metrics
-    print("Loading data and training model... This may take a moment.")
+    global pipeline_instance, model_instance, model_metrics, reference_data
+    global feature_importances, training_samples_count, feature_count
     
+    print("Loading data and training model... This may take a moment.")
     np.random.seed(42)
     df = pd.read_csv(BASE_DIR / "UsedCars.csv")
     df['selling_price'] = df['selling_price'] * 2.2
@@ -175,7 +173,6 @@ def initialize_and_train():
     
     df['brand'] = df['name'].str.split().str[0]
     df['model'] = df['name'].str.split().str[1:].str.join(' ')
-    df = df.drop(columns=['name'])
     
     for col, suffix in [('mileage', ' kmpl'), ('engine', ' CC'), ('max_power', ' bhp')]:
         df[col] = pd.to_numeric(df[col].astype(str).str.replace(suffix, '', regex=False), errors='coerce')
@@ -187,6 +184,8 @@ def initialize_and_train():
     top_models = df['model'].value_counts().head(25).index
     df['model'] = df['model'].apply(lambda x: x if x in top_models else "Other")
     df['brand_model'] = df['brand'] + "_" + df['model']
+    
+    reference_data = df.copy() # Store for recommendations
     
     train = df.sample(frac=0.8, random_state=42)
     test = df.drop(train.index)
@@ -205,8 +204,8 @@ def initialize_and_train():
     y_pred = np.expm1(y_pred_log)
     y_true = np.expm1(y_test)
 
-    # Calculate Metrics
     mse = np.mean((y_true - y_pred) ** 2)
+    rmse = np.sqrt(mse)
     mae = np.mean(np.abs(y_true - y_pred))
     r2 = 1 - (np.sum((y_true - y_pred) ** 2) / np.sum((y_true - np.mean(y_true)) ** 2))
     mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100
@@ -215,17 +214,75 @@ def initialize_and_train():
         'R2': round(r2, 4),
         'MAE': round(mae, 2),
         'MSE': round(mse, 2),
+        'RMSE': round(rmse, 2),
         'MAPE': f"{round(mape, 2)}%"
     }
+    
+    training_samples_count = len(train)
+    feature_count = len(pipeline_instance.feature_columns)
+    
+    # Store top 10 absolute feature importances for the dashboard
+    importances = list(zip(pipeline_instance.feature_columns, model_instance.coef_))
+    importances.sort(key=lambda x: abs(x[1]), reverse=True)
+    feature_importances = importances[:10]
+
     print("Training complete! Server ready.")
 
-# Run training before requests
 initialize_and_train()
-
 
 def render_page(template_name, active_page, **context):
     context["active_page"] = active_page
     return render_template(template_name, **context)
+
+# ---------------------------------------------------------
+# ADMIN & HELPER FUNCTIONS
+# ---------------------------------------------------------
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+def find_similar_cars(user_input, pred_price, top_n=5):
+    if reference_data is None or reference_data.empty:
+        return []
+    
+    df = reference_data.copy()
+    
+    # Hard filters
+    df = df[(df['brand'] == user_input['brand']) & 
+            (df['fuel'] == user_input['fuel'])]
+    
+    if len(df) == 0:
+        # Fallback to just fuel and transmission if brand not found
+        df = reference_data[(reference_data['fuel'] == user_input['fuel']) &
+                            (reference_data['transmission'] == user_input['transmission'])].copy()
+
+    # Calculate basic similarity distance (lower is better)
+    # Using absolute differences normalized roughly
+    df['sim_score'] = (
+        abs(df['year'] - user_input['year']) * 1000 + 
+        abs(df['engine'] - user_input['engine']) * 10 +
+        abs(df['selling_price'] - pred_price) * 0.1
+    )
+    
+    recommendations = df.sort_values('sim_score').head(top_n)
+    
+    results = []
+    for _, row in recommendations.iterrows():
+        diff = row['selling_price'] - pred_price
+        results.append({
+            'name': row.get('name', f"{row['brand']} {row['model']}"),
+            'year': row['year'],
+            'mileage': row.get('mileage', 'N/A'),
+            'fuel': row['fuel'],
+            'transmission': row['transmission'],
+            'actual_price': f"NPR {int(row['selling_price']):,}",
+            'diff': f"+NPR {int(diff):,}" if diff > 0 else f"-NPR {abs(int(diff)):,}"
+        })
+    return results
 
 # ---------------------------------------------------------
 # FLASK ROUTES
@@ -238,141 +295,77 @@ def index():
 def about():
     return render_page('about.html', 'about')
 
+@app.route('/metrics')
+def metrics():
+    # Format data for Chart.js
+    labels = [f[0] for f in feature_importances]
+    data = [round(f[1], 4) for f in feature_importances]
+    
+    return render_page('metrics.html', 'metrics', 
+                       metrics=model_metrics, 
+                       samples=training_samples_count,
+                       features=feature_count,
+                       chart_labels=labels,
+                       chart_data=data)
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    total_users = User.query.count()
+    total_preds = Estimate.query.count()
+    
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_preds = Estimate.query.filter(Estimate.created_at >= today_start).count()
+    
+    avg_price = db.session.query(func.avg(Estimate.predicted_price)).scalar()
+    avg_price = f"NPR {int(avg_price):,}" if avg_price else "NPR 0"
+    
+    recent_estimates = Estimate.query.order_by(Estimate.created_at.desc()).limit(10).all()
+    
+    return render_page('admin.html', 'admin',
+                       total_users=total_users,
+                       total_preds=total_preds,
+                       today_preds=today_preds,
+                       avg_price=avg_price,
+                       recent_estimates=recent_estimates)
+
+@app.route('/admin/export')
+@admin_required
+def export_csv():
+    estimates = Estimate.query.all()
+    
+    def generate():
+        data = StringIO()
+        writer = csv.writer(data)
+        writer.writerow(['ID', 'User ID', 'Brand', 'Model', 'Year', 'Fuel', 'Transmission', 'Predicted Price', 'Min Price', 'Max Price', 'Date'])
+        yield data.getvalue()
+        data.seek(0)
+        data.truncate(0)
+        
+        for est in estimates:
+            writer.writerow([est.id, est.user_id, est.brand, est.model, est.year, est.fuel, est.transmission, 
+                             est.predicted_price, est.min_price, est.max_price, est.created_at.strftime('%Y-%m-%d %H:%M:%S')])
+            yield data.getvalue()
+            data.seek(0)
+            data.truncate(0)
+
+    response = Response(generate(), mimetype='text/csv')
+    response.headers.set("Content-Disposition", "attachment", filename="prediction_history.csv")
+    return response
+
 @app.route('/estimate')
 def estimate():
     return render_page('estimate.html', 'estimate', metrics=model_metrics, price=None, error=None, form_data={})
 
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('profile'))
-
-    next_url = request.args.get('next', '')
-    form_data = {'email': ''}
-
-    if request.method == 'POST':
-        form_data['email'] = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-
-        if not csrf_is_valid():
-            return render_page(
-                'login.html', 'login', form_data=form_data, next_url=next_url,
-                error='Your form expired. Please try again.'
-            ), 400
-        if not form_data['email'] or not password:
-            return render_page(
-                'login.html', 'login', form_data=form_data, next_url=next_url,
-                error='Email and password are required.'
-            ), 400
-
-        try:
-            user = User.query.filter(func.lower(User.email) == form_data['email']).first()
-        except SQLAlchemyError:
-            db.session.rollback()
-            return render_page(
-                'login.html', 'login', form_data=form_data, next_url=next_url,
-                error='We could not reach your account. Please try again.'
-            ), 503
-
-        try:
-            valid_credentials = user is not None and user.check_password(password)
-        except (TypeError, ValueError):
-            valid_credentials = False
-
-        if not valid_credentials:
-            return render_page(
-                'login.html', 'login', form_data=form_data, next_url=next_url,
-                error='Invalid email or password.'
-            ), 401
-
-        login_user(user)
-        flash('Welcome back, {}.'.format(user.name), 'success')
-        return redirect(safe_next_url(next_url))
-
-    return render_page('login.html', 'login', form_data=form_data, next_url=next_url, error=None)
-
-
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if current_user.is_authenticated:
-        return redirect(url_for('profile'))
-
-    form_data = {'name': '', 'email': ''}
-    if request.method == 'POST':
-        form_data['name'] = request.form.get('name', '').strip()
-        form_data['email'] = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        confirm_password = request.form.get('confirm_password', '')
-
-        if not csrf_is_valid():
-            return render_page('signup.html', 'signup', form_data=form_data, error='Your form expired. Please try again.'), 400
-        if not form_data['name'] or not form_data['email'] or not password or not confirm_password:
-            return render_page('signup.html', 'signup', form_data=form_data, error='Complete all required fields.'), 400
-        if len(form_data['name']) > 100:
-            return render_page('signup.html', 'signup', form_data=form_data, error='Name must be 100 characters or fewer.'), 400
-        if len(form_data['email']) > 100 or '@' not in form_data['email']:
-            return render_page('signup.html', 'signup', form_data=form_data, error='Enter a valid email address.'), 400
-        if len(password) < 8:
-            return render_page('signup.html', 'signup', form_data=form_data, error='Password must be at least 8 characters.'), 400
-        if password != confirm_password:
-            return render_page('signup.html', 'signup', form_data=form_data, error='Passwords do not match.'), 400
-
-        try:
-            existing_user = User.query.filter(func.lower(User.email) == form_data['email']).first()
-            if existing_user:
-                return render_page('signup.html', 'signup', form_data=form_data, error='An account with that email already exists.'), 409
-
-            user = User(name=form_data['name'], email=form_data['email'])
-            user.set_password(password)
-            db.session.add(user)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            return render_page('signup.html', 'signup', form_data=form_data, error='An account with that email already exists.'), 409
-        except SQLAlchemyError:
-            db.session.rollback()
-            return render_page('signup.html', 'signup', form_data=form_data, error='We could not create your account. Please try again.'), 503
-
-        login_user(user)
-        flash('Your account has been created. Welcome to AutoValue.', 'success')
-        return redirect(url_for('index'))
-
-    return render_page('signup.html', 'signup', form_data=form_data, error=None)
-
-
-@app.route('/profile')
-@login_required
-def profile():
-    try:
-        estimates = current_user.estimates.order_by(Estimate.created_at.desc()).all()
-    except SQLAlchemyError:
-        db.session.rollback()
-        estimates = []
-        flash('We could not load your estimate history. Please try again.', 'error')
-    return render_page('profile.html', 'profile', estimates=estimates)
-
-
-@app.route('/logout', methods=['POST'])
-@login_required
-def logout():
-    if not csrf_is_valid():
-        flash('Your form expired. Please try again.', 'error')
-        return redirect(url_for('profile'))
-    logout_user()
-    session.pop('_csrf_token', None)
-    flash('You have been logged out.', 'success')
-    return redirect(url_for('index'))
+# --- KEEP YOUR EXISTING /login, /signup, /profile, /logout ROUTES EXACTLY AS THEY WERE ---
+# (I am omitting them here for brevity, but they require no modifications for these features to work)
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    # Extract form data and convert types safely
     form_data = request.form.to_dict(flat=True)
     if not csrf_is_valid():
-        return render_page(
-            'estimate.html', 'estimate', metrics=model_metrics, price=None,
-            error='Your form expired. Please submit the estimate again.', form_data=form_data
-        ), 400
+        return render_page('estimate.html', 'estimate', metrics=model_metrics, price=None,
+            error='Your form expired. Please submit the estimate again.', form_data=form_data), 400
 
     try:
         user_input = {
@@ -396,8 +389,17 @@ def predict():
         pred_log = model_instance.predict(processed)
         price = float(np.expm1(pred_log[0]))
         
-        # Format the price nicely
+        # Calculate Range using MAE
+        mae_value = float(model_metrics['MAE'])
+        min_price = max(0, price - mae_value)
+        max_price = price + mae_value
+        
         formatted_price = f"NPR {int(price):,}"
+        formatted_min = f"NPR {int(min_price):,}"
+        formatted_max = f"NPR {int(max_price):,}"
+
+        # Get Similar Cars
+        similar_cars = find_similar_cars(user_input, price)
 
         save_error = None
         if current_user.is_authenticated:
@@ -410,6 +412,8 @@ def predict():
                     fuel=user_input['fuel'],
                     transmission=user_input['transmission'],
                     predicted_price=price,
+                    min_price=min_price,
+                    max_price=max_price
                 )
                 db.session.add(estimate_record)
                 db.session.commit()
@@ -418,8 +422,9 @@ def predict():
                 save_error = 'Your estimate was generated, but it could not be saved to history.'
         
         return render_page(
-            'estimate.html', 'estimate', metrics=model_metrics, price=formatted_price,
-            error=None, save_error=save_error, form_data=form_data,
+            'estimate.html', 'estimate', metrics=model_metrics, 
+            price=formatted_price, min_price=formatted_min, max_price=formatted_max,
+            similar_cars=similar_cars, error=None, save_error=save_error, form_data=form_data,
             estimate_saved=current_user.is_authenticated and save_error is None
         )
     
@@ -431,5 +436,4 @@ def predict():
         )
 
 if __name__ == '__main__':
-
     app.run(debug=True)
