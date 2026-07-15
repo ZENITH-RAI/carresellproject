@@ -28,10 +28,9 @@
         <header class="page-head">
           <h1>About this project</h1>
           <p>
-            <strong>AutoValue</strong> is a small tool for getting a ballpark
+            <strong>AutoValue</strong> is a full-stack predictive tool for getting a realistic
             resale price for a used car. Tell us about the vehicle—make, age,
-            mileage, and a few specs—and we return an estimate informed by
-            patterns in past listings.
+            mileage, and a few specs—and we return a precise estimate, a realistic price range, and similar market alternatives informed by historical data.
           </p>
         </header>
 
@@ -39,26 +38,31 @@
           <h2>Why it exists</h2>
           <p>
             Buying or selling a used car often comes down to guesswork. This
-            project was built as coursework to explore how data and machine
-            learning can support a clearer starting point: not a guarantee, but
-            a reasoned estimate you can compare with market listings and your
+            project was built as coursework to explore how data engineering and machine
+            learning can support a clearer starting point: not just a single guaranteed number, but
+            a reasoned estimated range you can actively compare with our recommended market listings and your
             own judgment.
           </p>
 
+          <h2>Core Features</h2>
+          <ul>
+            <li><strong>Smart Price Ranges:</strong> Instead of relying on a single prediction, we calculate a minimum and maximum estimated value based on the model's Mean Absolute Error (MAE).</li>
+            <li><strong>Market Alternatives:</strong> Our recommendation engine automatically scans historical datasets to find the top 5 most similar cars, allowing users to compare predicted values against real-world market prices.</li>
+            <li><strong>Model Transparency:</strong> We believe in transparent AI. A dedicated Machine Learning metrics dashboard allows you to view the algorithm's performance (RMSE, R² Score) and feature weight importance in real-time.</li>
+          </ul>
+
           <h2>How it works</h2>
           <p>
-            Behind the scenes, a model learns from historical sales data. When
-            you submit the form, your inputs are turned into a prediction you
-            can read at a glance. The site is meant to stay simple on the
-            surface—details of the implementation belong in documentation and
-            demos for anyone who needs them.
+            Under the hood, a custom <strong>Stochastic Gradient Descent (SGD) Regressor</strong> learns from historical sales data. 
+            Before predictions are made, our robust data pipeline engineers new features (like age, power-to-weight ratios, and luxury brand categorization) and normalizes the inputs. 
+            When you submit the form, the model outputs a prediction, while a parallel similarity-scoring algorithm calculates Euclidean-like distances to fetch the closest real-world car matches.
           </p>
 
           <h2>A note on accuracy</h2>
           <p>
             Real prices depend on condition, service history, location,
-            negotiation, and timing. Treat any number here as a guide, not
-            financial advice.
+            negotiation, and timing. Treat any number or range here as a data-driven guide, not
+            financial or legal advice.
           </p>
         </div>
       </div>
@@ -87,6 +91,8 @@
         </p>
       </div>
     </footer>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </html>
+
+    
